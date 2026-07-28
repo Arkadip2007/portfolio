@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Atom, Zap, Activity, Flame, Gauge } from 'lucide-react';
 import { soundFX } from '../utils/audio';
 
@@ -16,6 +16,7 @@ export const LhcSimulator: React.FC = () => {
   const [eventCount, setEventCount] = useState(142);
   const [higgsDetected, setHiggsDetected] = useState(false);
   const beamEnergy = 6.8; // 6.8 TeV per beam = 13.6 TeV total
+
   const [events, setEvents] = useState<ParticleEvent[]>([
     { id: 1, type: 'Higgs Boson (h⁰ → γγ)', energy: '125.1 GeV', color: '#ff00aa', angle: 45, length: 110 },
     { id: 2, type: 'Gluon Jet', energy: '450 GeV', color: '#00f3ff', angle: 135, length: 140 },
@@ -23,44 +24,17 @@ export const LhcSimulator: React.FC = () => {
     { id: 4, type: 'Muon Track (μ⁺)', energy: '85 GeV', color: '#8a2be2', angle: 310, length: 160 }
   ]);
 
-  // Subtle Mouse Magnetic Pull on Center Point
-  const [centerOffset, setCenterOffset] = useState({ x: 0, y: 0 });
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  // Electric Spark Pulse Tick (0 -> 1) traveling inward from outer track ends to the center
+  const [sparkTick, setSparkTick] = useState(0);
 
   useEffect(() => {
     let animId: number;
-    let targetX = 0;
-    let targetY = 0;
-    let currentX = 0;
-    let currentY = 0;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      const relativeX = e.clientX - (rect.left + rect.width / 2);
-      const relativeY = e.clientY - (rect.top + rect.height / 2);
-
-      // Subtle max pull of 8 pixels
-      const maxOffset = 8;
-      targetX = Math.max(-maxOffset, Math.min(maxOffset, (relativeX / (rect.width / 2)) * maxOffset));
-      targetY = Math.max(-maxOffset, Math.min(maxOffset, (relativeY / (rect.height / 2)) * maxOffset));
+    const loop = () => {
+      setSparkTick((prev) => (prev + 0.015) % 1);
+      animId = requestAnimationFrame(loop);
     };
-
-    const updatePosition = () => {
-      // Smooth lerp
-      currentX += (targetX - currentX) * 0.08;
-      currentY += (targetY - currentY) * 0.08;
-      setCenterOffset({ x: currentX, y: currentY });
-      animId = requestAnimationFrame(updatePosition);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    animId = requestAnimationFrame(updatePosition);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      cancelAnimationFrame(animId);
-    };
+    animId = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(animId);
   }, []);
 
   const handleCollide = () => {
@@ -114,9 +88,9 @@ export const LhcSimulator: React.FC = () => {
     }, 600);
   };
 
-  // Center Point with mouse pull offset
-  const centerX = 200 + centerOffset.x;
-  const centerY = 200 + centerOffset.y;
+  // Fixed interaction center
+  const centerX = 200;
+  const centerY = 200;
 
   return (
     <section id="lhc" className="py-20 px-4 lg:px-12 max-w-7xl mx-auto relative z-10">
@@ -151,7 +125,7 @@ export const LhcSimulator: React.FC = () => {
           </div>
 
           {/* SVG LHC Collision Chamber Ring */}
-          <div ref={containerRef} className="relative w-full max-w-md aspect-square flex items-center justify-center">
+          <div className="relative w-full max-w-md aspect-square flex items-center justify-center">
             
             <svg className="w-full h-full" viewBox="0 0 400 400">
               
@@ -186,66 +160,35 @@ export const LhcSimulator: React.FC = () => {
                 style={{ animationDuration: '0.4s', transformOrigin: 'center' }}
               />
 
-              {/* 4 Vibrating Quantum Connection Strings (Connecting 4 Quadrants to Interaction Center) */}
-              <g>
-                {/* Cable 1: Top-Left (45 deg) */}
-                <line
-                  x1={200 - 170 * Math.cos(Math.PI / 4)}
-                  y1={200 - 170 * Math.sin(Math.PI / 4)}
-                  x2={centerX}
-                  y2={centerY}
-                  stroke="#00f3ff"
-                  strokeWidth="1.5"
-                  strokeDasharray="4 2"
-                  className="animate-string-vibrate-1 opacity-75"
-                />
-                {/* Cable 2: Top-Right (135 deg) */}
-                <line
-                  x1={200 + 170 * Math.cos(Math.PI / 4)}
-                  y1={200 - 170 * Math.sin(Math.PI / 4)}
-                  x2={centerX}
-                  y2={centerY}
-                  stroke="#ff00aa"
-                  strokeWidth="1.5"
-                  strokeDasharray="4 2"
-                  className="animate-string-vibrate-2 opacity-75"
-                />
-                {/* Cable 3: Bottom-Left (225 deg) */}
-                <line
-                  x1={200 - 170 * Math.cos(Math.PI / 4)}
-                  y1={200 + 170 * Math.sin(Math.PI / 4)}
-                  x2={centerX}
-                  y2={centerY}
-                  stroke="#00ff88"
-                  strokeWidth="1.5"
-                  strokeDasharray="4 2"
-                  className="animate-string-vibrate-1 opacity-75"
-                />
-                {/* Cable 4: Bottom-Right (315 deg) */}
-                <line
-                  x1={200 + 170 * Math.cos(Math.PI / 4)}
-                  y1={200 + 170 * Math.sin(Math.PI / 4)}
-                  x2={centerX}
-                  y2={centerY}
-                  stroke="#8a2be2"
-                  strokeWidth="1.5"
-                  strokeDasharray="4 2"
-                  className="animate-string-vibrate-2 opacity-75"
-                />
-              </g>
-
-              {/* Interaction Center Point (with Mouse Attraction Offset) */}
-              <circle cx={centerX} cy={centerY} r="14" fill="#050714" stroke="#00f3ff" strokeWidth="2" className="transition-transform duration-100" />
+              {/* Center Interaction Core */}
+              <circle cx={centerX} cy={centerY} r="14" fill="#050714" stroke="#00f3ff" strokeWidth="2" />
               <circle cx={centerX} cy={centerY} r="6" fill={colliding ? '#ffffff' : '#ff00aa'} className={colliding ? 'animate-ping' : ''} />
 
-              {/* Render Subatomic Particle Decay Tracks */}
-              {events.map((ev) => {
+              {/* Render Existing 4 Particle Collision Track Lines with Electrical Sparks Flowing Inward */}
+              {events.map((ev, i) => {
                 const rad = (ev.angle * Math.PI) / 180;
                 const endX = centerX + Math.cos(rad) * ev.length;
                 const endY = centerY + Math.sin(rad) * ev.length;
 
+                // Perpendicular vector for electric spark micro-jitters
+                const perpX = -Math.sin(rad);
+                const perpY = Math.cos(rad);
+
+                // Electrical Spark 1 (traveling from outer endX,endY towards center 200,200)
+                const t1 = (sparkTick + i * 0.25) % 1;
+                const jitter1 = Math.sin(sparkTick * 40 + i * 13) * 2.5;
+                const spark1X = endX + (centerX - endX) * t1 + perpX * jitter1;
+                const spark1Y = endY + (centerY - endY) * t1 + perpY * jitter1;
+
+                // Electrical Spark 2 (staggered follow-up spark)
+                const t2 = (t1 + 0.45) % 1;
+                const jitter2 = Math.cos(sparkTick * 35 + i * 19) * 2.2;
+                const spark2X = endX + (centerX - endX) * t2 + perpX * jitter2;
+                const spark2Y = endY + (centerY - endY) * t2 + perpY * jitter2;
+
                 return (
                   <g key={ev.id}>
+                    {/* Electrified Base Track Line */}
                     <line
                       x1={centerX}
                       y1={centerY}
@@ -253,10 +196,32 @@ export const LhcSimulator: React.FC = () => {
                       y2={endY}
                       stroke={ev.color}
                       strokeWidth="2.5"
-                      strokeDasharray="5 3"
-                      className="transition-all duration-300"
+                      strokeDasharray="6 3"
+                      style={{
+                        strokeDashoffset: -sparkTick * 50,
+                      }}
                     />
+                    
+                    {/* Outer Endpoint Bead */}
                     <circle cx={endX} cy={endY} r="4" fill={ev.color} />
+
+                    {/* Electrical Spark Pulses traveling inward towards the center */}
+                    <circle
+                      cx={spark1X}
+                      cy={spark1Y}
+                      r="2.5"
+                      fill="#ffffff"
+                      stroke={ev.color}
+                      strokeWidth="1.5"
+                      className="opacity-90"
+                    />
+                    <circle
+                      cx={spark2X}
+                      cy={spark2Y}
+                      r="2"
+                      fill={ev.color}
+                      className="opacity-80"
+                    />
                   </g>
                 );
               })}

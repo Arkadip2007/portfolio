@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { CosmosCanvas } from './components/CosmosCanvas';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
@@ -10,6 +10,15 @@ import { Terminal } from './components/Terminal';
 import { Contact } from './components/Contact';
 
 export const App: React.FC = () => {
+  useEffect(() => {
+    // Disable browser scroll restoration so page refresh always starts at top
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+    // Scroll window to top on page load / refresh
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#050714] text-slate-100 relative selection:bg-cyan-400 selection:text-black overflow-x-hidden w-full max-w-full">
       {/* 1. Spacetime & Particle Canvas */}

@@ -29,10 +29,17 @@ export const Terminal: React.FC = () => {
     },
   ]);
 
-  const terminalEndRef = useRef<HTMLDivElement | null>(null);
+  const outputContainerRef = useRef<HTMLDivElement | null>(null);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (outputContainerRef.current) {
+      outputContainerRef.current.scrollTop = outputContainerRef.current.scrollHeight;
+    }
   }, [history]);
 
   const handleCommandSubmit = (e: React.FormEvent) => {
@@ -154,7 +161,7 @@ export const Terminal: React.FC = () => {
         </div>
 
         {/* Output Screen */}
-        <div className="p-4 sm:p-6 bg-slate-950/95 font-mono text-xs sm:text-sm min-h-[320px] max-h-[460px] overflow-y-auto space-y-4 text-slate-200 break-words">
+        <div ref={outputContainerRef} className="p-4 sm:p-6 bg-slate-950/95 font-mono text-xs sm:text-sm min-h-[320px] max-h-[460px] overflow-y-auto space-y-4 text-slate-200 break-words">
           
           {history.map((item, idx) => (
             <div key={idx} className="space-y-1">
@@ -183,8 +190,6 @@ export const Terminal: React.FC = () => {
               <CornerDownLeft className="w-4 h-4" />
             </button>
           </form>
-
-          <div ref={terminalEndRef} />
         </div>
 
       </div>
