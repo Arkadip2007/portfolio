@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Arkadip Mahapatra | Class 12 Innovator • AI, Hardware & Astrophysics</title>
+    <meta name="description" content="Personal animated portfolio of Arkadip Mahapatra - Class 12 student passionate about Electronics (Arduino, ESP32, Raspberry Pi), Artificial Intelligence, Large Hadron Collider particle physics, and Turborepo + tRPC + Drizzle monorepos." />
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              cyan: {
+                400: '#00f3ff',
+                500: '#00c8d4',
+                950: '#031c24',
+              },
+              magenta: {
+                400: '#ff00aa',
+                500: '#d4008d',
+                950: '#26001a',
+              },
+              emerald: {
+                400: '#00ff88',
+                500: '#00cc6c',
+                950: '#002614',
+              },
+              violet: {
+                400: '#8a2be2',
+                950: '#1a0033',
+              }
+            },
+            fontFamily: {
+              heading: ['Orbitron', 'Inter', 'sans-serif'],
+              sans: ['Inter', 'sans-serif'],
+              mono: ['Fira Code', 'monospace'],
+            }
+          }
+        }
+      }
+    </script>
+  </head>
+  <body class="bg-[#050714] text-white selection:bg-cyan-400 selection:text-black">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
