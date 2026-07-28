@@ -1,28 +1,55 @@
 import React, { useState } from 'react';
-import { Send, CheckCircle2, Mail, Sparkles, MapPin, UserCheck } from 'lucide-react';
+import { Send, CheckCircle2, Mail, Sparkles, MapPin, UserCheck, Loader2, AlertCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { soundFX } from '../utils/audio';
 
 export const Contact: React.FC = () => {
   const [submitted, setSubmitted] = useState(false);
-  const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    soundFX.playBeep(1200, 0.15, 'sine');
-    
-    // Launch celebration confetti
-    try {
-      confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
-    } catch {
-      // fallback
-    }
+    setIsSubmitting(true);
+    setErrorMessage(null);
 
-    setSubmitted(true);
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to transmit message. Please try again.');
+      }
+
+      soundFX.playBeep(1200, 0.15, 'sine');
+
+      // Launch celebration confetti
+      try {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
+      } catch {
+        // fallback
+      }
+
+      setSubmitted(true);
+      setFormData({ name: '', email: '', subject: '', message: '' });
+    } catch (err: any) {
+      soundFX.playBeep(300, 0.2, 'sawtooth');
+      setErrorMessage(err.message || 'An error occurred while sending your message.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -81,7 +108,7 @@ export const Contact: React.FC = () => {
               <div className="w-14 h-14 rounded-full bg-emerald-500/20 border border-emerald-500 text-emerald-400 flex items-center justify-center mx-auto shadow-[0_0_20px_rgba(0,255,136,0.4)]">
                 <CheckCircle2 className="w-8 h-8 animate-bounce" />
               </div>
-              <h3 className="text-2xl font-bold text-white font-heading">Message Sent!</h3>
+              <h3 className="text-2xl font-bold text-white font-heading">Message Transmitted!</h3>
               <p className="text-slate-300 text-sm max-w-sm mx-auto">
                 Thank you for reaching out! Arkadip will get back to you soon.
               </p>
@@ -94,15 +121,23 @@ export const Contact: React.FC = () => {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {errorMessage && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs font-mono flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <div>{errorMessage}</div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-xs font-mono text-slate-300 mb-1.5">YOUR NAME</label>
                 <input
                   type="text"
                   required
+                  disabled={isSubmitting}
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Enter your name"
-                  className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm focus:border-cyan-400 focus:outline-none transition-colors"
+                  className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm focus:border-cyan-400 focus:outline-none transition-colors disabled:opacity-50"
                 />
               </div>
 
@@ -111,10 +146,23 @@ export const Contact: React.FC = () => {
                 <input
                   type="email"
                   required
+                  disabled={isSubmitting}
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="your.email@example.com"
-                  className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm focus:border-cyan-400 focus:outline-none transition-colors"
+                  className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm focus:border-cyan-400 focus:outline-none transition-colors disabled:opacity-50"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono text-slate-300 mb-1.5">SUBJECT</label>
+                <input
+                  type="text"
+                  disabled={isSubmitting}
+                  value={formData.subject}
+                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                  placeholder="What's this about?"
+                  className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm focus:border-cyan-400 focus:outline-none transition-colors disabled:opacity-50"
                 />
               </div>
 
@@ -123,16 +171,26 @@ export const Contact: React.FC = () => {
                 <textarea
                   required
                   rows={4}
+                  disabled={isSubmitting}
                   value={formData.message}
                   onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                   placeholder="Share details about your project, idea, or questions..."
-                  className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm focus:border-cyan-400 focus:outline-none transition-colors resize-none"
+                  className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-4 py-3 text-white text-sm focus:border-cyan-400 focus:outline-none transition-colors resize-none disabled:opacity-50"
                 />
               </div>
 
-              <button type="submit" className="btn-primary w-full py-3">
-                <Send className="w-4 h-4" />
-                TRANSMIT MESSAGE
+              <button type="submit" disabled={isSubmitting} className="btn-primary w-full py-3 flex items-center justify-center gap-2">
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    TRANSMITTING...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    TRANSMIT MESSAGE
+                  </>
+                )}
               </button>
             </form>
           )}
@@ -143,3 +201,4 @@ export const Contact: React.FC = () => {
     </section>
   );
 };
+
