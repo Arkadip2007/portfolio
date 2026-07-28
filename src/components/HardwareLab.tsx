@@ -66,40 +66,40 @@ export const HardwareLab: React.FC = () => {
       </div>
 
       {/* Board Selector Tabs */}
-      <div className="flex items-center justify-center gap-3 mb-8">
+      <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 mb-8">
         <button
           onClick={() => { soundFX.playClick(); setActiveBoard('arduino'); }}
-          className={`px-5 py-2.5 rounded-xl font-heading text-xs uppercase tracking-wider font-bold transition-all flex items-center gap-2 ${
+          className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl font-heading text-[11px] sm:text-xs uppercase tracking-wider font-bold transition-all flex items-center gap-1.5 sm:gap-2 ${
             activeBoard === 'arduino'
               ? 'bg-cyan-500 text-slate-950 shadow-[0_0_20px_rgba(0,243,255,0.4)]'
               : 'glass-panel text-slate-300 hover:text-white'
           }`}
         >
-          <Cpu className="w-4 h-4" />
+          <Cpu className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           Arduino Uno R3
         </button>
 
         <button
           onClick={() => { soundFX.playClick(); setActiveBoard('esp32'); }}
-          className={`px-5 py-2.5 rounded-xl font-heading text-xs uppercase tracking-wider font-bold transition-all flex items-center gap-2 ${
+          className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl font-heading text-[11px] sm:text-xs uppercase tracking-wider font-bold transition-all flex items-center gap-1.5 sm:gap-2 ${
             activeBoard === 'esp32'
               ? 'bg-magenta-500 text-slate-950 shadow-[0_0_20px_rgba(255,0,170,0.4)]'
               : 'glass-panel text-slate-300 hover:text-white'
           }`}
         >
-          <Wifi className="w-4 h-4" />
+          <Wifi className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           ESP32 Wi-Fi / BLE
         </button>
 
         <button
           onClick={() => { soundFX.playClick(); setActiveBoard('raspberry'); }}
-          className={`px-5 py-2.5 rounded-xl font-heading text-xs uppercase tracking-wider font-bold transition-all flex items-center gap-2 ${
+          className={`px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl font-heading text-[11px] sm:text-xs uppercase tracking-wider font-bold transition-all flex items-center gap-1.5 sm:gap-2 ${
             activeBoard === 'raspberry'
               ? 'bg-emerald-500 text-slate-950 shadow-[0_0_20px_rgba(0,255,136,0.4)]'
               : 'glass-panel text-slate-300 hover:text-white'
           }`}
         >
-          <Monitor className="w-4 h-4" />
+          <Monitor className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
           Raspberry Pi 4
         </button>
       </div>

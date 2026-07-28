@@ -154,30 +154,32 @@ export const Terminal: React.FC = () => {
         </div>
 
         {/* Output Screen */}
-        <div className="p-6 bg-slate-950/95 font-mono text-xs sm:text-sm min-h-[320px] max-h-[460px] overflow-y-auto space-y-4 text-slate-200">
+        <div className="p-4 sm:p-6 bg-slate-950/95 font-mono text-xs sm:text-sm min-h-[320px] max-h-[460px] overflow-y-auto space-y-4 text-slate-200 break-words">
           
           {history.map((item, idx) => (
             <div key={idx} className="space-y-1">
-              <div className="flex items-center gap-2 text-emerald-400">
-                <span>arkadip@cosmos-lab:~$</span>
-                <span className="text-white">{item.command}</span>
+              <div className="flex flex-wrap items-center gap-1.5 text-emerald-400">
+                <span className="text-[11px] sm:text-xs">arkadip@cosmos-lab:~$</span>
+                <span className="text-white font-bold">{item.command}</span>
               </div>
-              <div className="pl-4">{item.output}</div>
+              <div className="pl-2 sm:pl-4">{item.output}</div>
             </div>
           ))}
 
           {/* Active Prompt Form */}
-          <form onSubmit={handleCommandSubmit} className="flex items-center gap-2 pt-2">
-            <span className="text-emerald-400 font-bold">arkadip@cosmos-lab:~$</span>
+          <form onSubmit={handleCommandSubmit} className="flex items-center gap-2 pt-2 min-w-0">
+            <span className="text-emerald-400 font-bold shrink-0 text-[11px] sm:text-xs">
+              <span className="hidden sm:inline">arkadip@cosmos-lab:~$</span>
+              <span className="sm:hidden">arkadip:~$</span>
+            </span>
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="type help, lhc, whoami, stack..."
-              className="bg-transparent border-none outline-none text-cyan-300 font-mono text-xs sm:text-sm flex-1 placeholder:text-slate-600"
-              autoFocus
+              placeholder="type help, lhc, whoami..."
+              className="bg-transparent border-none outline-none text-cyan-300 font-mono text-xs sm:text-sm flex-1 min-w-0 placeholder:text-slate-600"
             />
-            <button type="submit" className="text-slate-500 hover:text-emerald-400">
+            <button type="submit" className="text-slate-500 hover:text-emerald-400 shrink-0">
               <CornerDownLeft className="w-4 h-4" />
             </button>
           </form>

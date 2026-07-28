@@ -11,7 +11,7 @@ import { Contact } from './components/Contact';
 
 export const App: React.FC = () => {
   return (
-    <div className="min-h-screen bg-[#050714] text-slate-100 relative selection:bg-cyan-400 selection:text-black">
+    <div className="min-h-screen bg-[#050714] text-slate-100 relative selection:bg-cyan-400 selection:text-black overflow-x-hidden w-full max-w-full">
       {/* 1. Spacetime & Particle Canvas */}
       <CosmosCanvas />
 
@@ -19,7 +19,7 @@ export const App: React.FC = () => {
       <Navbar />
 
       {/* 3. Main Content Sections */}
-      <main className="relative z-10 space-y-12">
+      <main className="relative z-10 space-y-12 overflow-x-hidden w-full">
         <Hero />
         <LhcSimulator />
         <HardwareLab />

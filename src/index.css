@@ -27,11 +27,16 @@
   scroll-behavior: smooth;
 }
 
+html, body, #root {
+  overflow-x: hidden;
+  max-width: 100%;
+  width: 100%;
+}
+
 body {
   background-color: var(--bg-primary);
   color: var(--text-main);
   font-family: var(--font-body);
-  overflow-x: hidden;
   line-height: 1.6;
   selection-background-color: var(--cyan);
   selection-color: #000;
@@ -237,4 +242,31 @@ h1, h2, h3, .font-heading {
 
 .animate-pulse-glow {
   animation: pulseGlow 3s infinite ease-in-out;
+}
+
+/* Quantum String High-Frequency Vibration */
+@keyframes stringVibrate1 {
+  0% { transform: translate(0px, 0px); }
+  25% { transform: translate(1px, -1px); }
+  50% { transform: translate(-1px, 1px); }
+  75% { transform: translate(1px, 0.5px); }
+  100% { transform: translate(0px, 0px); }
+}
+
+@keyframes stringVibrate2 {
+  0% { transform: translate(0px, 0px); }
+  25% { transform: translate(-1px, -0.8px); }
+  50% { transform: translate(0.8px, 1px); }
+  75% { transform: translate(-0.5px, -1px); }
+  100% { transform: translate(0px, 0px); }
+}
+
+.animate-string-vibrate-1 {
+  animation: stringVibrate1 0.12s linear infinite;
+  transform-origin: center;
+}
+
+.animate-string-vibrate-2 {
+  animation: stringVibrate2 0.15s linear infinite;
+  transform-origin: center;
 }

@@ -79,40 +79,40 @@ export const Hero: React.FC = () => {
           </div>
 
           {/* Key Metric Stats Grid */}
-          <div className="grid grid-cols-3 gap-4 pt-6 border-t border-slate-800/80 max-w-xl mx-auto lg:mx-0">
-            <div className="glass-panel p-3.5 text-center">
-              <div className="text-2xl font-black text-cyan-400 font-heading">100%</div>
-              <div className="text-xs text-slate-400 font-mono">Hands-on Hardware</div>
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-6 border-t border-slate-800/80 max-w-xl mx-auto lg:mx-0">
+            <div className="glass-panel p-2.5 sm:p-3.5 text-center min-w-0">
+              <div className="text-base sm:text-2xl font-black text-cyan-400 font-heading">100%</div>
+              <div className="text-[10px] sm:text-xs text-slate-400 font-mono truncate">Hardware</div>
             </div>
 
-            <div className="glass-panel p-3.5 text-center">
-              <div className="text-2xl font-black text-magenta-400 font-heading">13.6 TeV</div>
-              <div className="text-xs text-slate-400 font-mono">Particle Physics</div>
+            <div className="glass-panel p-2.5 sm:p-3.5 text-center min-w-0">
+              <div className="text-base sm:text-2xl font-black text-magenta-400 font-heading">13.6 TeV</div>
+              <div className="text-[10px] sm:text-xs text-slate-400 font-mono truncate">Physics</div>
             </div>
 
-            <div className="glass-panel p-3.5 text-center">
-              <div className="text-2xl font-black text-emerald-400 font-heading">Full Stack</div>
-              <div className="text-xs text-slate-400 font-mono">Turborepo + tRPC</div>
+            <div className="glass-panel p-2.5 sm:p-3.5 text-center min-w-0">
+              <div className="text-base sm:text-2xl font-black text-emerald-400 font-heading">Full Stack</div>
+              <div className="text-[10px] sm:text-xs text-slate-400 font-mono truncate">Turborepo</div>
             </div>
           </div>
 
         </div>
 
         {/* Right Photo & Hologram Display */}
-        <div className="lg:col-span-5 flex flex-col items-center justify-center relative">
+        <div className="lg:col-span-5 flex flex-col items-center justify-center relative w-full overflow-hidden py-6">
           
           {/* Hologram Circle Frame */}
-          <div className="relative group cursor-pointer" onClick={() => soundFX.playBeep(1400, 0.1)}>
+          <div className="relative group cursor-pointer max-w-full flex items-center justify-center" onClick={() => soundFX.playBeep(1400, 0.1)}>
             
             {/* Background SVG Telemetry Rings */}
-            <svg className="absolute -inset-10 w-[calc(100%+80px)] h-[calc(100%+80px)] pointer-events-none z-0 opacity-60 animate-spin-slow" viewBox="0 0 200 200">
+            <svg className="absolute -inset-4 sm:-inset-10 w-[calc(100%+32px)] sm:w-[calc(100%+80px)] h-[calc(100%+32px)] sm:h-[calc(100%+80px)] pointer-events-none z-0 opacity-60 animate-spin-slow" viewBox="0 0 200 200">
               <circle cx="100" cy="100" r="90" fill="none" stroke="#00f3ff" strokeWidth="0.5" strokeDasharray="4 6" />
               <circle cx="100" cy="100" r="82" fill="none" stroke="#ff00aa" strokeWidth="0.8" strokeDasharray="10 20" />
               <circle cx="100" cy="100" r="74" fill="none" stroke="#00ff88" strokeWidth="0.4" />
             </svg>
 
             {/* Photo Container */}
-            <div className="holo-avatar-container w-64 h-64 sm:w-72 sm:h-72">
+            <div className="holo-avatar-container w-48 h-48 sm:w-72 sm:h-72 shrink-0">
               <img
                 src="/arkadip_photo.jpg"
                 alt="Arkadip Mahapatra"
@@ -124,20 +124,20 @@ export const Hero: React.FC = () => {
             </div>
 
             {/* Floating HUD Badges around photo */}
-            <div className="absolute -bottom-4 -left-4 glass-panel px-3.5 py-2 rounded-xl flex items-center gap-2 text-xs font-mono text-cyan-300 shadow-xl border border-cyan-500/40 z-20">
-              <Zap className="w-4 h-4 text-cyan-400 animate-bounce" />
+            <div className="absolute -bottom-2 left-0 sm:-left-4 glass-panel px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-mono text-cyan-300 shadow-xl border border-cyan-500/40 z-20">
+              <Zap className="w-3.5 h-3.5 text-cyan-400 animate-bounce" />
               <span>ESP32 & IoT Dev</span>
             </div>
 
-            <div className="absolute -top-3 -right-4 glass-panel px-3.5 py-2 rounded-xl flex items-center gap-2 text-xs font-mono text-magenta-300 shadow-xl border border-magenta-500/40 z-20">
-              <Atom className="w-4 h-4 text-magenta-400" />
-              <span>Cosmos & Spacetime</span>
+            <div className="absolute -top-2 right-0 sm:-right-4 glass-panel px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-mono text-magenta-300 shadow-xl border border-magenta-500/40 z-20">
+              <Atom className="w-3.5 h-3.5 text-magenta-400" />
+              <span>Cosmos & Physics</span>
             </div>
           </div>
 
-          <p className="text-xs text-slate-400 font-mono mt-8 text-center flex items-center gap-2">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            Click photo or elements for interactive audio feedback
+          <p className="text-xs text-slate-400 font-mono mt-6 text-center flex items-center justify-center gap-2">
+            <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span>Click photo or elements for SFX audio</span>
           </p>
 
         </div>

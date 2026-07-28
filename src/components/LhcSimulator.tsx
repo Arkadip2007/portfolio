@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Atom, Zap, Activity, Flame, Gauge } from 'lucide-react';
 import { soundFX } from '../utils/audio';
 
@@ -22,6 +22,46 @@ export const LhcSimulator: React.FC = () => {
     { id: 3, type: 'Top Quark Pair', energy: '173 GeV', color: '#00ff88', angle: 220, length: 95 },
     { id: 4, type: 'Muon Track (μ⁺)', energy: '85 GeV', color: '#8a2be2', angle: 310, length: 160 }
   ]);
+
+  // Subtle Mouse Magnetic Pull on Center Point
+  const [centerOffset, setCenterOffset] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let animId: number;
+    let targetX = 0;
+    let targetY = 0;
+    let currentX = 0;
+    let currentY = 0;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const relativeX = e.clientX - (rect.left + rect.width / 2);
+      const relativeY = e.clientY - (rect.top + rect.height / 2);
+
+      // Subtle max pull of 8 pixels
+      const maxOffset = 8;
+      targetX = Math.max(-maxOffset, Math.min(maxOffset, (relativeX / (rect.width / 2)) * maxOffset));
+      targetY = Math.max(-maxOffset, Math.min(maxOffset, (relativeY / (rect.height / 2)) * maxOffset));
+    };
+
+    const updatePosition = () => {
+      // Smooth lerp
+      currentX += (targetX - currentX) * 0.08;
+      currentY += (targetY - currentY) * 0.08;
+      setCenterOffset({ x: currentX, y: currentY });
+      animId = requestAnimationFrame(updatePosition);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    animId = requestAnimationFrame(updatePosition);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      cancelAnimationFrame(animId);
+    };
+  }, []);
 
   const handleCollide = () => {
     soundFX.playLhcCollisionSound();
@@ -74,6 +114,10 @@ export const LhcSimulator: React.FC = () => {
     }, 600);
   };
 
+  // Center Point with mouse pull offset
+  const centerX = 200 + centerOffset.x;
+  const centerY = 200 + centerOffset.y;
+
   return (
     <section id="lhc" className="py-20 px-4 lg:px-12 max-w-7xl mx-auto relative z-10">
       
@@ -107,7 +151,7 @@ export const LhcSimulator: React.FC = () => {
           </div>
 
           {/* SVG LHC Collision Chamber Ring */}
-          <div className="relative w-full max-w-md aspect-square flex items-center justify-center">
+          <div ref={containerRef} className="relative w-full max-w-md aspect-square flex items-center justify-center">
             
             <svg className="w-full h-full" viewBox="0 0 400 400">
               
@@ -142,27 +186,75 @@ export const LhcSimulator: React.FC = () => {
                 style={{ animationDuration: '0.4s', transformOrigin: 'center' }}
               />
 
-              {/* Interaction Center Point */}
-              <circle cx="200" cy="200" r="14" fill="#050714" stroke="#00f3ff" strokeWidth="2" />
-              <circle cx="200" cy="200" r="6" fill={colliding ? '#ffffff' : '#ff00aa'} className={colliding ? 'animate-ping' : ''} />
+              {/* 4 Vibrating Quantum Connection Strings (Connecting 4 Quadrants to Interaction Center) */}
+              <g>
+                {/* Cable 1: Top-Left (45 deg) */}
+                <line
+                  x1={200 - 170 * Math.cos(Math.PI / 4)}
+                  y1={200 - 170 * Math.sin(Math.PI / 4)}
+                  x2={centerX}
+                  y2={centerY}
+                  stroke="#00f3ff"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 2"
+                  className="animate-string-vibrate-1 opacity-75"
+                />
+                {/* Cable 2: Top-Right (135 deg) */}
+                <line
+                  x1={200 + 170 * Math.cos(Math.PI / 4)}
+                  y1={200 - 170 * Math.sin(Math.PI / 4)}
+                  x2={centerX}
+                  y2={centerY}
+                  stroke="#ff00aa"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 2"
+                  className="animate-string-vibrate-2 opacity-75"
+                />
+                {/* Cable 3: Bottom-Left (225 deg) */}
+                <line
+                  x1={200 - 170 * Math.cos(Math.PI / 4)}
+                  y1={200 + 170 * Math.sin(Math.PI / 4)}
+                  x2={centerX}
+                  y2={centerY}
+                  stroke="#00ff88"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 2"
+                  className="animate-string-vibrate-1 opacity-75"
+                />
+                {/* Cable 4: Bottom-Right (315 deg) */}
+                <line
+                  x1={200 + 170 * Math.cos(Math.PI / 4)}
+                  y1={200 + 170 * Math.sin(Math.PI / 4)}
+                  x2={centerX}
+                  y2={centerY}
+                  stroke="#8a2be2"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 2"
+                  className="animate-string-vibrate-2 opacity-75"
+                />
+              </g>
+
+              {/* Interaction Center Point (with Mouse Attraction Offset) */}
+              <circle cx={centerX} cy={centerY} r="14" fill="#050714" stroke="#00f3ff" strokeWidth="2" className="transition-transform duration-100" />
+              <circle cx={centerX} cy={centerY} r="6" fill={colliding ? '#ffffff' : '#ff00aa'} className={colliding ? 'animate-ping' : ''} />
 
               {/* Render Subatomic Particle Decay Tracks */}
               {events.map((ev) => {
                 const rad = (ev.angle * Math.PI) / 180;
-                const endX = 200 + Math.cos(rad) * ev.length;
-                const endY = 200 + Math.sin(rad) * ev.length;
+                const endX = centerX + Math.cos(rad) * ev.length;
+                const endY = centerY + Math.sin(rad) * ev.length;
 
                 return (
                   <g key={ev.id}>
                     <line
-                      x1="200"
-                      y1="200"
+                      x1={centerX}
+                      y1={centerY}
                       x2={endX}
                       y2={endY}
                       stroke={ev.color}
                       strokeWidth="2.5"
                       strokeDasharray="5 3"
-                      className="transition-all duration-500"
+                      className="transition-all duration-300"
                     />
                     <circle cx={endX} cy={endY} r="4" fill={ev.color} />
                   </g>
@@ -179,9 +271,9 @@ export const LhcSimulator: React.FC = () => {
 
             {/* Higgs Detection Alert Overlay */}
             {higgsDetected && !colliding && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-magenta-950/90 border border-magenta-500 text-magenta-300 text-xs font-mono px-4 py-1.5 rounded-full shadow-[0_0_20px_rgba(255,0,170,0.6)] flex items-center gap-2 animate-bounce">
-                <Flame className="w-4 h-4 text-magenta-400" />
-                HIGGS BOSON DECAY EVENT DETECTED!
+              <div className="absolute bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 bg-magenta-950/90 border border-magenta-500 text-magenta-300 text-[10px] sm:text-xs font-mono px-3 sm:px-4 py-1.5 rounded-full shadow-[0_0_20px_rgba(255,0,170,0.6)] flex items-center gap-1.5 sm:gap-2 animate-bounce max-w-[92%] text-center">
+                <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-magenta-400 shrink-0" />
+                <span className="truncate">HIGGS BOSON DECAY EVENT DETECTED!</span>
               </div>
             )}
           </div>
@@ -197,8 +289,8 @@ export const LhcSimulator: React.FC = () => {
               {colliding ? 'ACCELERATING BEAMS...' : 'COLLIDE BEAMS (13.6 TeV)'}
             </button>
 
-            <div className="text-xs font-mono text-slate-400 flex items-center gap-4">
-              <span>Events Logged: <strong className="text-cyan-400">{eventCount}</strong></span>
+            <div className="text-[11px] sm:text-xs font-mono text-slate-400 flex flex-wrap items-center justify-center gap-3">
+              <span>Events: <strong className="text-cyan-400">{eventCount}</strong></span>
               <span>Velocity: <strong className="text-emerald-400">0.999999991 c</strong></span>
             </div>
           </div>
