@@ -30,16 +30,26 @@ export const CosmosCanvas: React.FC = () => {
     window.addEventListener('mousemove', handleMouseMove);
 
     // Stars & Particles
-    const numParticles = Math.min(100, Math.floor(width / 15));
-    const particles = Array.from({ length: numParticles }, () => ({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      vx: (Math.random() - 0.5) * 0.4,
-      vy: (Math.random() - 0.5) * 0.4,
-      radius: Math.random() * 1.8 + 0.5,
-      color: Math.random() > 0.4 ? '#00f3ff' : Math.random() > 0.5 ? '#ff00aa' : '#8a2be2',
-      alpha: Math.random() * 0.7 + 0.3,
-    }));
+    const numParticles = Math.min(110, Math.floor(width / 14));
+    const particles = Array.from({ length: numParticles }, () => {
+      const baseVx = (Math.random() - 0.5) * 0.4;
+      const baseVy = (Math.random() - 0.5) * 0.4;
+      return {
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: baseVx,
+        vy: baseVy,
+        baseVx,
+        baseVy,
+        radius: Math.random() * 1.8 + 0.6,
+        color: Math.random() > 0.4 ? '#00f3ff' : Math.random() > 0.5 ? '#ff00aa' : '#8a2be2',
+        alpha: Math.random() * 0.7 + 0.3,
+        // Individual random offset around the imaginary orbital ring (~140px)
+        // Fuzzy offset spread: +/- 55px so the circle remains soft and organic
+        orbitOffset: (Math.random() - 0.5) * 110,
+        spin: Math.random() > 0.5 ? 1 : -1,
+      };
+    });
 
     // Spacetime Grid setup
     const gridSize = 60;
@@ -118,13 +128,49 @@ export const CosmosCanvas: React.FC = () => {
 
       // 2. Render Cosmic Floating Particles & Constellations
       particles.forEach((p, idx) => {
+        // Distance to mouse
+        const mdx = p.x - mouse.x;
+        const mdy = p.y - mouse.y;
+        const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
+        const influenceRadius = 280;
+
+        if (mdist < influenceRadius && mdist > 0.1) {
+          // Target ring radius around mouse (base ~140px + individual random offset)
+          const targetDist = 140 + p.orbitOffset;
+          const distDiff = mdist - targetDist; // > 0 if outside ring, < 0 if inside ring
+
+          // Normalized vector pointing away from mouse
+          const ux = mdx / mdist;
+          const uy = mdy / mdist;
+
+          // Radial force: pull towards targetDist ring
+          const pullForce = -distDiff * 0.0025;
+
+          // Tangential swirl force (gentle orbit motion around ring)
+          const tx = -uy * p.spin;
+          const ty = ux * p.spin;
+          const swirlForce = 0.04;
+
+          p.vx += ux * pullForce + tx * swirlForce;
+          p.vy += uy * pullForce + ty * swirlForce;
+
+          // Gentle friction when influenced by mouse
+          p.vx *= 0.94;
+          p.vy *= 0.94;
+        } else {
+          // Gently drift back towards base velocity when outside mouse influence
+          p.vx += (p.baseVx - p.vx) * 0.03;
+          p.vy += (p.baseVy - p.vy) * 0.03;
+        }
+
         p.x += p.vx;
         p.y += p.vy;
 
-        if (p.x < 0) p.x = width;
-        if (p.x > width) p.x = 0;
-        if (p.y < 0) p.y = height;
-        if (p.y > height) p.y = 0;
+        // Wrap around screen edges
+        if (p.x < -20) p.x = width + 20;
+        if (p.x > width + 20) p.x = -20;
+        if (p.y < -20) p.y = height + 20;
+        if (p.y > height + 20) p.y = -20;
 
         ctx.fillStyle = p.color;
         ctx.globalAlpha = p.alpha;
@@ -139,9 +185,9 @@ export const CosmosCanvas: React.FC = () => {
           const pdy = p.y - p2.y;
           const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
 
-          if (pdist < 110) {
+          if (pdist < 115) {
             ctx.strokeStyle = p.color;
-            ctx.globalAlpha = (1 - pdist / 110) * 0.2;
+            ctx.globalAlpha = (1 - pdist / 115) * 0.22;
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(p2.x, p2.y);
