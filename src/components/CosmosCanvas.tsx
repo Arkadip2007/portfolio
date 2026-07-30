@@ -21,13 +21,13 @@ export const CosmosCanvas: React.FC = () => {
     };
     window.addEventListener('resize', handleResize);
 
-    // Subtle Web Audio API synthesizer for cosmic fusion & Supernova blast
+    // Subtle Web Audio API synthesizer for cosmic fusion, Supernova, and Kilonova rumbles
     let audioCtx: AudioContext | null = null;
     let lastSoundTime = 0;
 
-    const playSubtleFusionSound = (freqStart = 240, freqEnd = 120) => {
+    const playSubtleFusionSound = (freqStart = 240, freqEnd = 120, type: OscillatorType = 'sine', volume = 0.015) => {
       const now = Date.now();
-      if (now - lastSoundTime < 1800) return;
+      if (now - lastSoundTime < 1500) return;
       lastSoundTime = now;
 
       try {
@@ -46,23 +46,23 @@ export const CosmosCanvas: React.FC = () => {
         const gain = audioCtx.createGain();
         const filter = audioCtx.createBiquadFilter();
 
-        osc.type = 'sine';
+        osc.type = type;
         osc.frequency.setValueAtTime(freqStart, t);
-        osc.frequency.exponentialRampToValueAtTime(freqEnd, t + 0.45);
+        osc.frequency.exponentialRampToValueAtTime(freqEnd, t + 0.5);
 
         filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(450, t);
+        filter.frequency.setValueAtTime(500, t);
 
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.linearRampToValueAtTime(0.015, t + 0.08);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+        gain.gain.linearRampToValueAtTime(volume, t + 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
 
         osc.connect(filter);
         filter.connect(gain);
         gain.connect(audioCtx.destination);
 
         osc.start(t);
-        osc.stop(t + 0.45);
+        osc.stop(t + 0.5);
       } catch (e) {}
     };
 
@@ -100,7 +100,7 @@ export const CosmosCanvas: React.FC = () => {
 
     const particleColors = ['#00f3ff', '#38bdf8', '#7dd3fc', '#a855f7', '#ff00aa'];
 
-    // Stars & Particles Setup
+    // Regular Floating Stars
     const numParticles = Math.min(105, Math.floor(width / 14));
     const createRandomParticle = () => {
       const baseVx = (Math.random() - 0.5) * 0.45;
@@ -128,7 +128,31 @@ export const CosmosCanvas: React.FC = () => {
 
     let particles = Array.from({ length: numParticles }, () => createRandomParticle());
 
-    // 8 Authentic Constellations Templates (Strictly English Labels & Node Schemas)
+    // Heavy Golden Neutron Stars (3 Special High-Mass Stars)
+    const neutronStars = Array.from({ length: 3 }, () => ({
+      x: Math.random() * (width - 200) + 100,
+      y: Math.random() * (height - 200) + 100,
+      vx: (Math.random() - 0.5) * 0.35,
+      vy: (Math.random() - 0.5) * 0.35,
+      radius: 3.6,
+      mass: 12, // Heavy mass -> resists mouse gravity
+      color: '#fbbf24', // Golden Yellow
+      glowColor: 'rgba(245, 158, 11, 0.45)',
+      collisionCooldown: 0,
+    }));
+
+    // Kilonova Spacetime Ripple Waves
+    interface KilonovaRipple {
+      x: number;
+      y: number;
+      radius: number;
+      maxRadius: number;
+      strength: number;
+      alpha: number;
+    }
+    let kilonovaRipples: KilonovaRipple[] = [];
+
+    // 8 Authentic Constellations Templates (Strictly English Labels)
     const constellationTemplates = [
       {
         name: '✨ Ursa Major',
@@ -235,16 +259,72 @@ export const CosmosCanvas: React.FC = () => {
       }
     ];
 
-    let nextConstellationTime = Date.now() + Math.random() * 45000 + 20000;
-    let activeConstellation: {
+    interface ActiveConstellation {
+      id: number;
       templateIdx: number;
       centerX: number;
       centerY: number;
+      vx: number;
+      vy: number;
       rotationAngle: number;
-      duration: number;
-      maxDuration: number;
+      angularVelocity: number;
       particleIndices: number[];
-    } | null = null;
+      isDissolving: boolean;
+      dissolveTimer: number;
+    }
+
+    let activeConstellations: ActiveConstellation[] = [];
+    let nextConstellationSpawnTime = Date.now() + 2000;
+
+    // Helper to spawn a new drifting constellation
+    const spawnConstellation = (customX?: number, customY?: number) => {
+      const templateIdx = Math.floor(Math.random() * constellationTemplates.length);
+      const tmpl = constellationTemplates[templateIdx];
+
+      const centerX = customX ?? Math.random() * (width - 300) + 150;
+      const centerY = customY ?? Math.random() * (height - 300) + 150;
+      const rotationAngle = Math.random() * Math.PI * 2;
+      const angularVelocity = (Math.random() - 0.5) * 0.003;
+
+      const driftAngle = Math.random() * Math.PI * 2;
+      const driftSpeed = Math.random() * 0.25 + 0.15;
+      const vx = Math.cos(driftAngle) * driftSpeed;
+      const vy = Math.sin(driftAngle) * driftSpeed;
+
+      const indices: number[] = [];
+      particles.forEach((p, idx) => {
+        if (
+          indices.length < tmpl.nodes.length &&
+          p.immunityTimer <= 0 &&
+          p.mass === 1 &&
+          !p.constellationTarget
+        ) {
+          indices.push(idx);
+        }
+      });
+
+      if (indices.length === tmpl.nodes.length) {
+        activeConstellations.push({
+          id: Math.random(),
+          templateIdx,
+          centerX,
+          centerY,
+          vx,
+          vy,
+          rotationAngle,
+          angularVelocity,
+          particleIndices: indices,
+          isDissolving: false,
+          dissolveTimer: 30,
+        });
+      }
+    };
+
+    // Pre-spawn 2 or 3 constellations immediately on page load so viewer is wowed!
+    setTimeout(() => {
+      spawnConstellation(width * 0.3, height * 0.35);
+      spawnConstellation(width * 0.7, height * 0.65);
+    }, 100);
 
     // Spacetime Grid setup
     const gridSize = 60;
@@ -252,13 +332,14 @@ export const CosmosCanvas: React.FC = () => {
     const rows = Math.ceil(height / gridSize) + 2;
 
     const render = () => {
-      // Smooth mouse lerp
       mouse.x += (mouse.targetX - mouse.x) * 0.05;
       mouse.y += (mouse.targetY - mouse.y) * 0.05;
 
       ctx.clearRect(0, 0, width, height);
 
-      // Check trapped stars count near mouse orbit
+      const now = Date.now();
+
+      // Trapped stars count near mouse
       let trappedStarsCount = 0;
       particles.forEach(p => {
         const dx = p.x - mouse.x;
@@ -268,9 +349,7 @@ export const CosmosCanvas: React.FC = () => {
         }
       });
 
-      // Rare Supernova Implosion Trigger Condition:
-      // Must have gathered at least 5 stars near mouse AND mouse held still for 3+ seconds AND cooldown passed!
-      const now = Date.now();
+      // Supernova trigger condition
       if (
         trappedStarsCount >= 5 &&
         now - lastMouseMoved > 3000 &&
@@ -279,21 +358,20 @@ export const CosmosCanvas: React.FC = () => {
         !isBlasting
       ) {
         isCollapsing = true;
-        collapseTimer = 70; // ~1.2s implosion phase
+        collapseTimer = 70;
         playSubtleFusionSound(150, 450);
       }
 
       if (isCollapsing) {
         collapseTimer--;
         if (collapseTimer <= 0) {
-          // BOOM! Supernova Blast
           isCollapsing = false;
           isBlasting = true;
           blastTimer = 45;
           shockwaveRadius = 15;
           playSubtleFusionSound(500, 100);
 
-          // Radial blast outward for all particles!
+          // Supernova blasts all particles and dissolves all active constellations!
           particles.forEach(p => {
             const angle = Math.atan2(p.y - mouse.y, p.x - mouse.x) || Math.random() * Math.PI * 2;
             const speed = Math.random() * 5.5 + 4.0;
@@ -302,15 +380,24 @@ export const CosmosCanvas: React.FC = () => {
             p.immunityTimer = 220;
             p.mass = 1;
             p.radius = p.baseRadius;
+            p.constellationTarget = null;
           });
 
-          // Unpredictable random cooldown between 35s and 2.5 minutes before next supernova can happen
-          nextSupernovaAllowedTime = Date.now() + Math.random() * 115000 + 35000;
-          lastMouseMoved = Date.now();
+          activeConstellations.forEach(c => { c.isDissolving = true; });
+
+          nextSupernovaAllowedTime = now + Math.random() * 115000 + 35000;
+          lastMouseMoved = now;
         }
       }
 
-      // 1. Render Spacetime Grid Warping
+      // Update Kilonova Ripples
+      kilonovaRipples = kilonovaRipples.filter(r => {
+        r.radius += 14;
+        r.alpha *= 0.955;
+        return r.radius < r.maxRadius && r.alpha > 0.01;
+      });
+
+      // 1. Render Spacetime Grid Warping with Kilonova Distortion Ripples
       ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
       ctx.lineWidth = 1;
 
@@ -334,6 +421,19 @@ export const CosmosCanvas: React.FC = () => {
             warpX += (dx / dist) * force;
             warpY += (dy / dist) * force;
           }
+
+          // Apply Kilonova Gravitational Wave Ripples on Spacetime Grid!
+          kilonovaRipples.forEach(r => {
+            const rdx = warpX - r.x;
+            const rdy = warpY - r.y;
+            const rdist = Math.hypot(rdx, rdy) || 1;
+            const waveDist = Math.abs(rdist - r.radius);
+            if (waveDist < 70) {
+              const waveForce = Math.sin((waveDist / 70) * Math.PI) * r.strength * (1 - r.radius / r.maxRadius) * r.alpha;
+              warpX += (rdx / rdist) * waveForce;
+              warpY += (rdy / rdist) * waveForce;
+            }
+          });
 
           if (j === 0) {
             ctx.moveTo(warpX, warpY);
@@ -365,6 +465,18 @@ export const CosmosCanvas: React.FC = () => {
             warpY += (dy / dist) * force;
           }
 
+          kilonovaRipples.forEach(r => {
+            const rdx = warpX - r.x;
+            const rdy = warpY - r.y;
+            const rdist = Math.hypot(rdx, rdy) || 1;
+            const waveDist = Math.abs(rdist - r.radius);
+            if (waveDist < 70) {
+              const waveForce = Math.sin((waveDist / 70) * Math.PI) * r.strength * (1 - r.radius / r.maxRadius) * r.alpha;
+              warpX += (rdx / rdist) * waveForce;
+              warpY += (rdy / rdist) * waveForce;
+            }
+          });
+
           if (i === 0) {
             ctx.moveTo(warpX, warpY);
           } else {
@@ -374,7 +486,78 @@ export const CosmosCanvas: React.FC = () => {
         ctx.stroke();
       }
 
-      // 2. Pairwise Collision check for Stellar Fusion & Hawking Ejection
+      // 2. Heavy Golden Neutron Stars Collision & Physics Engine
+      for (let i = 0; i < neutronStars.length; i++) {
+        const n1 = neutronStars[i];
+        if (n1.collisionCooldown > 0) n1.collisionCooldown--;
+
+        // Heavy resist mouse gravity
+        const ndx = mouse.x - n1.x;
+        const ndy = mouse.y - n1.y;
+        const ndist = Math.hypot(ndx, ndy);
+        if (ndist < 220 && ndist > 0.1) {
+          // Only 12% mouse pull due to extreme mass
+          n1.vx += (ndx / ndist) * 0.008;
+          n1.vy += (ndy / ndist) * 0.008;
+        }
+
+        n1.x += n1.vx;
+        n1.y += n1.vy;
+
+        // Bounce off canvas boundaries
+        if (n1.x < 30 || n1.x > width - 30) n1.vx *= -1;
+        if (n1.y < 30 || n1.y > height - 30) n1.vy *= -1;
+
+        // Pairwise collision check for Neutron Star Kilonova Wave
+        for (let j = i + 1; j < neutronStars.length; j++) {
+          const n2 = neutronStars[j];
+          const cdx = n1.x - n2.x;
+          const cdy = n1.y - n2.y;
+          const cdist = Math.hypot(cdx, cdy);
+
+          if (cdist < 26 && n1.collisionCooldown <= 0 && n2.collisionCooldown <= 0) {
+            n1.collisionCooldown = 60;
+            n2.collisionCooldown = 60;
+
+            // Elastic bounce
+            n1.vx *= -1;
+            n1.vy *= -1;
+            n2.vx *= -1;
+            n2.vy *= -1;
+
+            // KILONOVA GRAVITATIONAL WAVE RIPPLE!
+            kilonovaRipples.push({
+              x: (n1.x + n2.x) / 2,
+              y: (n1.y + n2.y) / 2,
+              radius: 10,
+              maxRadius: Math.max(width, height) * 0.85,
+              strength: 45,
+              alpha: 0.8,
+            });
+
+            // Deep cosmic bass rumble
+            playSubtleFusionSound(120, 40, 'triangle', 0.03);
+          }
+        }
+
+        // Render Golden Neutron Star & Pulsing Aura
+        ctx.save();
+        ctx.fillStyle = n1.color;
+        ctx.shadowColor = '#f59e0b';
+        ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.arc(n1.x, n1.y, n1.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = n1.glowColor;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(n1.x, n1.y, n1.radius + 4 + Math.sin(now * 0.005) * 1.5, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // 3. Regular Stars Fusion & Hawking Ejection
       for (let i = 0; i < particles.length; i++) {
         const p1 = particles[i];
         const mdx1 = p1.x - mouse.x;
@@ -436,78 +619,106 @@ export const CosmosCanvas: React.FC = () => {
         }
       }
 
-      // 3. Rare Constellation Spawning Logic (1 of 8 Famous Constellations, Random Orientation & Location)
-      if (now > nextConstellationTime && !activeConstellation) {
-        // Schedule next constellation spawn time (rare & unpredictable: 40s to 2.5 minutes)
-        nextConstellationTime = now + Math.random() * 110000 + 40000;
+      // 4. Auto Respawn Constellations if active count < 2
+      if (now > nextConstellationSpawnTime && activeConstellations.length < 2) {
+        nextConstellationSpawnTime = now + Math.random() * 25000 + 4000;
+        spawnConstellation();
+      }
 
-        const templateIdx = Math.floor(Math.random() * constellationTemplates.length);
-        const tmpl = constellationTemplates[templateIdx];
+      // Update & Render Active Constellations (Smooth Drift & Mouse Dissolution)
+      activeConstellations = activeConstellations.filter(c => {
+        const tmpl = constellationTemplates[c.templateIdx];
 
-        // Random center location in viewport with safety margins
-        const centerX = Math.random() * (width - 300) + 150;
-        const centerY = Math.random() * (height - 300) + 150;
-        const rotationAngle = Math.random() * Math.PI * 2; // Random 3D spatial rotation
+        // Smooth spiral/curved drift
+        c.centerX += c.vx;
+        c.centerY += c.vy;
+        c.rotationAngle += c.angularVelocity;
 
-        // Select free particles in deep space
-        const indices: number[] = [];
-        particles.forEach((p, idx) => {
-          if (indices.length < tmpl.nodes.length && p.immunityTimer <= 0 && p.mass === 1) {
-            const dx = p.x - mouse.x;
-            const dy = p.y - mouse.y;
-            if (Math.hypot(dx, dy) > 140) {
-              indices.push(idx);
+        // Wrap constellation center around edges
+        if (c.centerX < 100) c.vx = Math.abs(c.vx);
+        if (c.centerX > width - 100) c.vx = -Math.abs(c.vx);
+        if (c.centerY < 100) c.vy = Math.abs(c.vy);
+        if (c.centerY > height - 100) c.vy = -Math.abs(c.vy);
+
+        const cosA = Math.cos(c.rotationAngle);
+        const sinA = Math.sin(c.rotationAngle);
+
+        let isMouseNearConstellation = false;
+
+        // Update target positions for assigned particles
+        c.particleIndices.forEach((pIdx, nodeIdx) => {
+          const p = particles[pIdx];
+          if (p) {
+            const node = tmpl.nodes[nodeIdx];
+            const rx = node.x * cosA - node.y * sinA;
+            const ry = node.x * sinA + node.y * cosA;
+
+            const targetX = c.centerX + rx;
+            const targetY = c.centerY + ry;
+
+            // Mouse proximity dissolution check
+            const mdist = Math.hypot(targetX - mouse.x, targetY - mouse.y);
+            if (mdist < 100) {
+              isMouseNearConstellation = true;
+            }
+
+            if (!c.isDissolving) {
+              p.constellationTarget = { x: targetX, y: targetY };
             }
           }
         });
 
-        if (indices.length === tmpl.nodes.length) {
-          activeConstellation = {
-            templateIdx,
-            centerX,
-            centerY,
-            rotationAngle,
-            duration: 260, // ~4.3 seconds display
-            maxDuration: 260,
-            particleIndices: indices,
-          };
+        // Trigger dissolution if mouse gets close
+        if (isMouseNearConstellation && !c.isDissolving) {
+          c.isDissolving = true;
         }
-      }
 
-      // Update Active Constellation Positions with Rotation Math
-      if (activeConstellation) {
-        const tmpl = constellationTemplates[activeConstellation.templateIdx];
-        activeConstellation.duration--;
-
-        if (activeConstellation.duration <= 0) {
-          activeConstellation.particleIndices.forEach(idx => {
-            if (particles[idx]) {
-              particles[idx].constellationTarget = null;
-            }
-          });
-          activeConstellation = null;
-        } else {
-          const cosA = Math.cos(activeConstellation.rotationAngle);
-          const sinA = Math.sin(activeConstellation.rotationAngle);
-
-          activeConstellation.particleIndices.forEach((pIdx, nodeIdx) => {
-            const p = particles[pIdx];
-            if (p) {
-              const node = tmpl.nodes[nodeIdx];
-              // Rotated relative coordinates
-              const rx = node.x * cosA - node.y * sinA;
-              const ry = node.x * sinA + node.y * cosA;
-
-              p.constellationTarget = {
-                x: activeConstellation!.centerX + rx,
-                y: activeConstellation!.centerY + ry,
-              };
-            }
-          });
+        if (c.isDissolving) {
+          c.dissolveTimer--;
+          if (c.dissolveTimer <= 0) {
+            // Unbind particles back to regular drifting stars
+            c.particleIndices.forEach(idx => {
+              if (particles[idx]) particles[idx].constellationTarget = null;
+            });
+            return false; // Remove constellation
+          }
         }
-      }
 
-      // 4. Render Cosmic Floating Particles & Constellations
+        // Render Constellation Glowing Lines & Title
+        const fadeAlpha = c.isDissolving ? (c.dissolveTimer / 30) * 0.7 : 0.75;
+        ctx.save();
+        ctx.strokeStyle = '#00f3ff';
+        ctx.shadowColor = '#00f3ff';
+        ctx.shadowBlur = 10;
+        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = fadeAlpha;
+
+        tmpl.edges.forEach(([n1, n2]) => {
+          const p1Idx = c.particleIndices[n1];
+          const p2Idx = c.particleIndices[n2];
+          const p1 = particles[p1Idx];
+          const p2 = particles[p2Idx];
+
+          if (p1 && p2) {
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+          }
+        });
+
+        // English Title Label floating with constellation
+        ctx.font = '11px monospace';
+        ctx.fillStyle = '#00f3ff';
+        ctx.textAlign = 'center';
+        ctx.globalAlpha = fadeAlpha * 0.75;
+        ctx.fillText(tmpl.name, c.centerX, c.centerY - 55);
+        ctx.restore();
+
+        return true;
+      });
+
+      // 5. Render Regular Particles
       let outerStarCount = 0;
 
       particles.forEach((p, idx) => {
@@ -564,13 +775,11 @@ export const CosmosCanvas: React.FC = () => {
           p.y += p.vy;
         }
 
-        // Screen wrap
         if (p.x < -20) p.x = width + 20;
         if (p.x > width + 20) p.x = -20;
         if (p.y < -20) p.y = height + 20;
         if (p.y > height + 20) p.y = -20;
 
-        // Render Particle
         ctx.fillStyle = p.color;
         ctx.globalAlpha = p.alpha;
         ctx.beginPath();
@@ -604,44 +813,20 @@ export const CosmosCanvas: React.FC = () => {
         }
       });
 
-      // 5. Draw Glowing Authentic Constellation Lines & Title (Strictly English)
-      if (activeConstellation) {
-        const tmpl = constellationTemplates[activeConstellation.templateIdx];
-        const fadeRatio = activeConstellation.duration > 40
-          ? Math.min(1, (activeConstellation.maxDuration - activeConstellation.duration) / 30)
-          : activeConstellation.duration / 40;
-
+      // 6. Draw Kilonova Gravitational Wave Shockwaves
+      kilonovaRipples.forEach(r => {
         ctx.save();
-        ctx.strokeStyle = '#00f3ff';
-        ctx.shadowColor = '#00f3ff';
-        ctx.shadowBlur = 10;
-        ctx.lineWidth = 1.5;
-        ctx.globalAlpha = fadeRatio * 0.7;
-
-        tmpl.edges.forEach(([n1, n2]) => {
-          const p1Idx = activeConstellation!.particleIndices[n1];
-          const p2Idx = activeConstellation!.particleIndices[n2];
-          const p1 = particles[p1Idx];
-          const p2 = particles[p2Idx];
-
-          if (p1 && p2) {
-            ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.stroke();
-          }
-        });
-
-        // Subtle English Constellation Title
-        ctx.font = '11px monospace';
-        ctx.fillStyle = '#00f3ff';
-        ctx.textAlign = 'center';
-        ctx.globalAlpha = fadeRatio * 0.65;
-        ctx.fillText(tmpl.name, activeConstellation.centerX, activeConstellation.centerY - 55);
+        ctx.strokeStyle = 'rgba(251, 191, 36, ' + (r.alpha * 0.5) + ')';
+        ctx.shadowColor = '#f59e0b';
+        ctx.shadowBlur = 16;
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+        ctx.stroke();
         ctx.restore();
-      }
+      });
 
-      // 6. Draw Expanding Supernova Shockwave Ring if Blasting
+      // 7. Draw Expanding Supernova Shockwave Ring if Blasting
       if (isBlasting) {
         blastTimer--;
         shockwaveRadius += 16;
@@ -661,7 +846,7 @@ export const CosmosCanvas: React.FC = () => {
         }
       }
 
-      // 7. Deep Space Respawn Safety Net
+      // 8. Deep Space Respawn Safety Net
       if (outerStarCount < Math.floor(numParticles * 0.4)) {
         const trappedIndex = particles.findIndex(p => {
           const dx = p.x - mouse.x;
@@ -690,7 +875,7 @@ export const CosmosCanvas: React.FC = () => {
 
       ctx.globalAlpha = 1;
 
-      // 8. Central Event Horizon subtle aura around mouse
+      // 9. Central Event Horizon subtle aura around mouse
       const gradient = ctx.createRadialGradient(
         mouse.x,
         mouse.y,
