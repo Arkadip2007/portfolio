@@ -21,7 +21,7 @@ export const CosmosCanvas: React.FC = () => {
     };
     window.addEventListener('resize', handleResize);
 
-    // Subtle, soft Web Audio API synthesizer for cosmic fusion & Supernova blast
+    // Subtle Web Audio API synthesizer for cosmic fusion & Supernova blast
     let audioCtx: AudioContext | null = null;
     let lastSoundTime = 0;
 
@@ -77,13 +77,14 @@ export const CosmosCanvas: React.FC = () => {
     let isBlasting = false;
     let blastTimer = 0;
     let shockwaveRadius = 0;
+    let nextSupernovaAllowedTime = Date.now() + Math.random() * 45000 + 25000;
 
     const handleMouseMove = (e: MouseEvent) => {
       mouse.targetX = e.clientX;
       mouse.targetY = e.clientY;
 
       const distMoved = Math.hypot(e.clientX - prevMousePos.x, e.clientY - prevMousePos.y);
-      if (distMoved > 5) {
+      if (distMoved > 6) {
         lastMouseMoved = Date.now();
         prevMousePos = { x: e.clientX, y: e.clientY };
       }
@@ -127,46 +128,119 @@ export const CosmosCanvas: React.FC = () => {
 
     let particles = Array.from({ length: numParticles }, () => createRandomParticle());
 
-    // Famous Constellations Templates (relative offsets)
+    // 8 Authentic Constellations Templates (Strictly English Labels & Node Schemas)
     const constellationTemplates = [
       {
-        name: '✨ Ursa Major (সপ্তর্ষিমণ্ডল)',
+        name: '✨ Ursa Major',
         nodes: [
-          { x: -110, y: -35 },
-          { x: -70, y: -25 },
-          { x: -35, y: -10 },
+          { x: -90, y: -30 },
+          { x: -55, y: -20 },
+          { x: -25, y: -8 },
           { x: 0, y: 0 },
-          { x: 10, y: 45 },
-          { x: 55, y: 55 },
-          { x: 45, y: 10 },
+          { x: 8, y: 38 },
+          { x: 45, y: 45 },
+          { x: 38, y: 8 },
         ],
-        edges: [
-          [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 3]
-        ]
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 3]]
       },
       {
-        name: '✨ Orion (কালপুরুষ)',
+        name: '✨ Orion',
         nodes: [
-          { x: -45, y: -50 },
-          { x: 45, y: -50 },
-          { x: -20, y: 0 },
+          { x: -35, y: -45 },
+          { x: 35, y: -45 },
+          { x: -18, y: 0 },
           { x: 0, y: 0 },
-          { x: 20, y: 0 },
-          { x: -35, y: 55 },
-          { x: 35, y: 55 },
-          { x: 0, y: -25 },
+          { x: 18, y: 0 },
+          { x: -30, y: 48 },
+          { x: 30, y: 48 },
+          { x: 0, y: -20 },
         ],
-        edges: [
-          [0, 1], [0, 2], [1, 4], [2, 3], [3, 4], [2, 5], [4, 6], [7, 3]
-        ]
+        edges: [[0, 1], [0, 2], [1, 4], [2, 3], [3, 4], [2, 5], [4, 6], [7, 3]]
+      },
+      {
+        name: '✨ Cassiopeia',
+        nodes: [
+          { x: -55, y: -10 },
+          { x: -28, y: 18 },
+          { x: 0, y: -12 },
+          { x: 28, y: 22 },
+          { x: 55, y: -5 }
+        ],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4]]
+      },
+      {
+        name: '✨ Scorpius',
+        nodes: [
+          { x: -65, y: -20 },
+          { x: -38, y: -10 },
+          { x: -15, y: 0 },
+          { x: 0, y: 15 },
+          { x: 15, y: 35 },
+          { x: 35, y: 45 },
+          { x: 50, y: 30 },
+          { x: 60, y: 10 }
+        ],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7]]
+      },
+      {
+        name: '✨ Cygnus',
+        nodes: [
+          { x: 0, y: -48 },
+          { x: 0, y: -15 },
+          { x: 0, y: 20 },
+          { x: 0, y: 52 },
+          { x: -42, y: 0 },
+          { x: 42, y: 0 }
+        ],
+        edges: [[0, 1], [1, 2], [2, 3], [4, 1], [1, 5]]
+      },
+      {
+        name: '✨ Leo',
+        nodes: [
+          { x: 42, y: -32 },
+          { x: 18, y: -48 },
+          { x: -10, y: -38 },
+          { x: -22, y: -12 },
+          { x: -18, y: 15 },
+          { x: 22, y: 18 },
+          { x: 52, y: 12 },
+          { x: -50, y: 22 }
+        ],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 0], [4, 7]]
+      },
+      {
+        name: '✨ Taurus',
+        nodes: [
+          { x: -48, y: -28 },
+          { x: -18, y: -10 },
+          { x: 0, y: 0 },
+          { x: 22, y: -18 },
+          { x: 48, y: -38 },
+          { x: 15, y: 22 },
+          { x: 38, y: 38 }
+        ],
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4], [2, 5], [5, 6]]
+      },
+      {
+        name: '✨ Canis Major',
+        nodes: [
+          { x: 0, y: -38 },
+          { x: -22, y: -12 },
+          { x: 22, y: -12 },
+          { x: -32, y: 22 },
+          { x: 32, y: 22 },
+          { x: 0, y: 42 }
+        ],
+        edges: [[0, 1], [0, 2], [1, 3], [2, 4], [3, 5], [4, 5], [1, 2]]
       }
     ];
 
-    let constellationTimer = 0;
+    let nextConstellationTime = Date.now() + Math.random() * 45000 + 20000;
     let activeConstellation: {
       templateIdx: number;
       centerX: number;
       centerY: number;
+      rotationAngle: number;
       duration: number;
       maxDuration: number;
       particleIndices: number[];
@@ -184,12 +258,29 @@ export const CosmosCanvas: React.FC = () => {
 
       ctx.clearRect(0, 0, width, height);
 
-      // Check mouse idle for Supernova Collapse & Burst (3.5 seconds idle)
+      // Check trapped stars count near mouse orbit
+      let trappedStarsCount = 0;
+      particles.forEach(p => {
+        const dx = p.x - mouse.x;
+        const dy = p.y - mouse.y;
+        if (Math.hypot(dx, dy) < 110) {
+          trappedStarsCount++;
+        }
+      });
+
+      // Rare Supernova Implosion Trigger Condition:
+      // Must have gathered at least 5 stars near mouse AND mouse held still for 3+ seconds AND cooldown passed!
       const now = Date.now();
-      if (now - lastMouseMoved > 3500 && !isCollapsing && !isBlasting) {
+      if (
+        trappedStarsCount >= 5 &&
+        now - lastMouseMoved > 3000 &&
+        now > nextSupernovaAllowedTime &&
+        !isCollapsing &&
+        !isBlasting
+      ) {
         isCollapsing = true;
         collapseTimer = 70; // ~1.2s implosion phase
-        playSubtleFusionSound(150, 450); // Pitch sweep up
+        playSubtleFusionSound(150, 450);
       }
 
       if (isCollapsing) {
@@ -200,7 +291,7 @@ export const CosmosCanvas: React.FC = () => {
           isBlasting = true;
           blastTimer = 45;
           shockwaveRadius = 15;
-          playSubtleFusionSound(500, 100); // Blast chime
+          playSubtleFusionSound(500, 100);
 
           // Radial blast outward for all particles!
           particles.forEach(p => {
@@ -208,12 +299,14 @@ export const CosmosCanvas: React.FC = () => {
             const speed = Math.random() * 5.5 + 4.0;
             p.vx = Math.cos(angle) * speed;
             p.vy = Math.sin(angle) * speed;
-            p.immunityTimer = 220; // 4 seconds deep space flight
+            p.immunityTimer = 220;
             p.mass = 1;
             p.radius = p.baseRadius;
           });
 
-          lastMouseMoved = Date.now() + 5000; // Delay next collapse
+          // Unpredictable random cooldown between 35s and 2.5 minutes before next supernova can happen
+          nextSupernovaAllowedTime = Date.now() + Math.random() * 115000 + 35000;
+          lastMouseMoved = Date.now();
         }
       }
 
@@ -343,16 +436,18 @@ export const CosmosCanvas: React.FC = () => {
         }
       }
 
-      // 3. Real Constellation Spawning Logic (Ursa Major / Orion)
-      constellationTimer++;
-      if (constellationTimer > 750 && !activeConstellation) { // Every ~12.5 seconds
-        constellationTimer = 0;
+      // 3. Rare Constellation Spawning Logic (1 of 8 Famous Constellations, Random Orientation & Location)
+      if (now > nextConstellationTime && !activeConstellation) {
+        // Schedule next constellation spawn time (rare & unpredictable: 40s to 2.5 minutes)
+        nextConstellationTime = now + Math.random() * 110000 + 40000;
+
         const templateIdx = Math.floor(Math.random() * constellationTemplates.length);
         const tmpl = constellationTemplates[templateIdx];
 
-        // Pick a center far from mouse
-        const centerX = mouse.x < width / 2 ? width * 0.75 : width * 0.25;
-        const centerY = mouse.y < height / 2 ? height * 0.75 : height * 0.25;
+        // Random center location in viewport with safety margins
+        const centerX = Math.random() * (width - 300) + 150;
+        const centerY = Math.random() * (height - 300) + 150;
+        const rotationAngle = Math.random() * Math.PI * 2; // Random 3D spatial rotation
 
         // Select free particles in deep space
         const indices: number[] = [];
@@ -360,7 +455,7 @@ export const CosmosCanvas: React.FC = () => {
           if (indices.length < tmpl.nodes.length && p.immunityTimer <= 0 && p.mass === 1) {
             const dx = p.x - mouse.x;
             const dy = p.y - mouse.y;
-            if (Math.hypot(dx, dy) > 160) {
+            if (Math.hypot(dx, dy) > 140) {
               indices.push(idx);
             }
           }
@@ -371,20 +466,20 @@ export const CosmosCanvas: React.FC = () => {
             templateIdx,
             centerX,
             centerY,
-            duration: 260, // ~4.3 seconds
+            rotationAngle,
+            duration: 260, // ~4.3 seconds display
             maxDuration: 260,
             particleIndices: indices,
           };
         }
       }
 
-      // Update Active Constellation Positions
+      // Update Active Constellation Positions with Rotation Math
       if (activeConstellation) {
         const tmpl = constellationTemplates[activeConstellation.templateIdx];
         activeConstellation.duration--;
 
         if (activeConstellation.duration <= 0) {
-          // Release constellation particles
           activeConstellation.particleIndices.forEach(idx => {
             if (particles[idx]) {
               particles[idx].constellationTarget = null;
@@ -392,14 +487,20 @@ export const CosmosCanvas: React.FC = () => {
           });
           activeConstellation = null;
         } else {
-          // Target node alignment
+          const cosA = Math.cos(activeConstellation.rotationAngle);
+          const sinA = Math.sin(activeConstellation.rotationAngle);
+
           activeConstellation.particleIndices.forEach((pIdx, nodeIdx) => {
             const p = particles[pIdx];
             if (p) {
               const node = tmpl.nodes[nodeIdx];
+              // Rotated relative coordinates
+              const rx = node.x * cosA - node.y * sinA;
+              const ry = node.x * sinA + node.y * cosA;
+
               p.constellationTarget = {
-                x: activeConstellation!.centerX + node.x,
-                y: activeConstellation!.centerY + node.y,
+                x: activeConstellation!.centerX + rx,
+                y: activeConstellation!.centerY + ry,
               };
             }
           });
@@ -419,7 +520,6 @@ export const CosmosCanvas: React.FC = () => {
           outerStarCount++;
         }
 
-        // Handle Supernova Implosion pull
         if (isCollapsing) {
           const ux = mdx / (mdist || 1);
           const uy = mdy / (mdist || 1);
@@ -428,7 +528,6 @@ export const CosmosCanvas: React.FC = () => {
           p.vx *= 0.91;
           p.vy *= 0.91;
         } else if (p.constellationTarget) {
-          // Lerp gently towards constellation node position
           p.x += (p.constellationTarget.x - p.x) * 0.08;
           p.y += (p.constellationTarget.y - p.y) * 0.08;
           p.vx = 0;
@@ -505,7 +604,7 @@ export const CosmosCanvas: React.FC = () => {
         }
       });
 
-      // 5. Draw Glowing Real Constellation Lines & Label (Ursa Major / Orion)
+      // 5. Draw Glowing Authentic Constellation Lines & Title (Strictly English)
       if (activeConstellation) {
         const tmpl = constellationTemplates[activeConstellation.templateIdx];
         const fadeRatio = activeConstellation.duration > 40
@@ -533,12 +632,12 @@ export const CosmosCanvas: React.FC = () => {
           }
         });
 
-        // Subtle Constellation Title Label
+        // Subtle English Constellation Title
         ctx.font = '11px monospace';
         ctx.fillStyle = '#00f3ff';
         ctx.textAlign = 'center';
-        ctx.globalAlpha = fadeRatio * 0.6;
-        ctx.fillText(tmpl.name, activeConstellation.centerX, activeConstellation.centerY - 65);
+        ctx.globalAlpha = fadeRatio * 0.65;
+        ctx.fillText(tmpl.name, activeConstellation.centerX, activeConstellation.centerY - 55);
         ctx.restore();
       }
 
