@@ -50,23 +50,23 @@ export const CosmosCanvas: React.FC = () => {
         const filter = audioCtx.createBiquadFilter();
 
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(260, t);
-        osc.frequency.exponentialRampToValueAtTime(130, t + 0.45);
+        osc.frequency.setValueAtTime(240, t);
+        osc.frequency.exponentialRampToValueAtTime(120, t + 0.4);
 
         filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(450, t);
+        filter.frequency.setValueAtTime(400, t);
 
-        // Extremely quiet volume (0.015) - warm, non-intrusive ambient chime
+        // Extremely quiet volume (0.012) - warm, non-intrusive ambient chime
         gain.gain.setValueAtTime(0.0001, t);
-        gain.gain.linearRampToValueAtTime(0.015, t + 0.08);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.5);
+        gain.gain.linearRampToValueAtTime(0.012, t + 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
 
         osc.connect(filter);
         filter.connect(gain);
         gain.connect(audioCtx.destination);
 
         osc.start(t);
-        osc.stop(t + 0.5);
+        osc.stop(t + 0.45);
       } catch (e) {
         // Safe fallback if audio context blocked
       }
@@ -77,7 +77,6 @@ export const CosmosCanvas: React.FC = () => {
     const handleMouseMove = (e: MouseEvent) => {
       mouse.targetX = e.clientX;
       mouse.targetY = e.clientY;
-      // Initialize audio on user interaction
       if (!audioCtx) {
         try {
           const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
@@ -87,27 +86,30 @@ export const CosmosCanvas: React.FC = () => {
     };
     window.addEventListener('mousemove', handleMouseMove);
 
+    const particleColors = ['#00f3ff', '#38bdf8', '#7dd3fc', '#a855f7', '#ff00aa'];
+
     // Stars & Particles Setup
-    const numParticles = Math.min(120, Math.floor(width / 13));
-    const createRandomParticle = (customX?: number, customY?: number, customVx?: number, customVy?: number) => {
-      const baseVx = customVx ?? (Math.random() - 0.5) * 0.4;
-      const baseVy = customVy ?? (Math.random() - 0.5) * 0.4;
+    const numParticles = Math.min(100, Math.floor(width / 15));
+    const createRandomParticle = () => {
+      const baseVx = (Math.random() - 0.5) * 0.45;
+      const baseVy = (Math.random() - 0.5) * 0.45;
+      const baseRadius = Math.random() * 1.3 + 0.5; // Small dots (0.5px to 1.8px)
       return {
-        x: customX ?? Math.random() * width,
-        y: customY ?? Math.random() * height,
+        x: Math.random() * width,
+        y: Math.random() * height,
         vx: baseVx,
         vy: baseVy,
         baseVx,
         baseVy,
-        baseRadius: Math.random() * 1.5 + 0.6,
-        radius: Math.random() * 1.5 + 0.6,
+        baseRadius,
+        radius: baseRadius,
         mass: 1,
-        color: Math.random() > 0.4 ? '#00f3ff' : Math.random() > 0.5 ? '#ff00aa' : '#8a2be2',
-        alpha: Math.random() * 0.7 + 0.3,
-        orbitOffset: (Math.random() - 0.5) * 110,
+        color: particleColors[Math.floor(Math.random() * particleColors.length)],
+        alpha: Math.random() * 0.65 + 0.35,
+        orbitOffset: (Math.random() - 0.5) * 50, // Reduced spread around smaller orbit
         spin: Math.random() > 0.5 ? 1 : -1,
-        isEjected: false,
-        ejectTimer: 0,
+        immunityTimer: 0, // Frames of gravity immunity after Hawking ejection
+        decayTimer: 0,    // Frames before merged star decays back to small stars
       };
     };
 
@@ -126,7 +128,7 @@ export const CosmosCanvas: React.FC = () => {
       ctx.clearRect(0, 0, width, height);
 
       // 1. Render Spacetime Grid Warping
-      ctx.strokeStyle = 'rgba(0, 243, 255, 0.06)';
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
       ctx.lineWidth = 1;
 
       for (let i = 0; i < cols; i++) {
@@ -138,13 +140,13 @@ export const CosmosCanvas: React.FC = () => {
           const dx = mouse.x - gx;
           const dy = mouse.y - gy;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const maxDist = 280;
+          const maxDist = 220; // Reduced grid warp radius around mouse
 
           let warpX = gx;
           let warpY = gy;
 
           if (dist < maxDist) {
-            const force = (1 - dist / maxDist) * 35;
+            const force = (1 - dist / maxDist) * 28;
             warpX += (dx / dist) * force;
             warpY += (dy / dist) * force;
           }
@@ -167,13 +169,13 @@ export const CosmosCanvas: React.FC = () => {
           const dx = mouse.x - gx;
           const dy = mouse.y - gy;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const maxDist = 280;
+          const maxDist = 220;
 
           let warpX = gx;
           let warpY = gy;
 
           if (dist < maxDist) {
-            const force = (1 - dist / maxDist) * 35;
+            const force = (1 - dist / maxDist) * 28;
             warpX += (dx / dist) * force;
             warpY += (dy / dist) * force;
           }
@@ -194,37 +196,63 @@ export const CosmosCanvas: React.FC = () => {
         const mdy1 = p1.y - mouse.y;
         const mdist1 = Math.sqrt(mdx1 * mdx1 + mdy1 * mdy1);
 
-        // Stellar Fusion & Hawking Ejection when close to mouse
-        if (mdist1 < 190) {
+        // Check decay timer for merged stars
+        if (p1.mass > 1) {
+          p1.decayTimer--;
+          if (p1.decayTimer <= 0) {
+            // Merged star decays/breaks down back into a small star!
+            p1.mass = 1;
+            p1.radius = p1.baseRadius;
+            p1.color = particleColors[Math.floor(Math.random() * particleColors.length)];
+            p1.immunityTimer = Math.floor(Math.random() * 150) + 100; // Fly away into space
+            const burstAngle = Math.random() * Math.PI * 2;
+            p1.vx = Math.cos(burstAngle) * (Math.random() * 2 + 1.5);
+            p1.vy = Math.sin(burstAngle) * (Math.random() * 2 + 1.5);
+          }
+        }
+
+        // Stellar Fusion when near mouse
+        if (mdist1 < 140 && p1.immunityTimer <= 0) {
           for (let j = i + 1; j < particles.length; j++) {
             const p2 = particles[j];
             const pdx = p1.x - p2.x;
             const pdy = p1.y - p2.y;
             const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
 
-            // If two stars are extremely close under mouse gravity, they fuse!
-            if (pdist < 22 && !p1.isEjected && !p2.isEjected) {
-              if (p1.mass < 4) {
+            // If two stars touch in mouse gravity (within 16px), fuse them!
+            if (pdist < 16 && p2.immunityTimer <= 0) {
+              if (p1.mass < 3) {
                 // Merge p2 into p1
                 p1.mass += 1;
-                p1.radius = Math.min(6.0, p1.baseRadius + p1.mass * 1.2);
-                p1.color = p1.mass >= 3 ? '#ffffff' : '#00ffff';
+                // Compact max radius (max ~3.0px) so dots stay relatively small and elegant
+                p1.radius = Math.min(3.0, p1.baseRadius + p1.mass * 0.6);
+                p1.color = Math.random() > 0.4 ? '#38bdf8' : '#7dd3fc'; // Electric light blue / cyan Tones
+                p1.decayTimer = Math.floor(Math.random() * 180) + 150; // Decays in 2.5 - 5 seconds
 
-                // Soft Hawking audio chime
                 playSubtleFusionSound();
 
-                // Eject p2 away as Hawking Radiation (virtual particle jet into deep space!)
-                p2.x = mouse.x + (Math.random() - 0.5) * 20;
-                p2.y = mouse.y + (Math.random() - 0.5) * 20;
-                const ejectAngle = Math.random() * Math.PI * 2;
-                const ejectSpeed = Math.random() * 3.5 + 2.5; // High speed jet away
-                p2.vx = Math.cos(ejectAngle) * ejectSpeed;
-                p2.vy = Math.sin(ejectAngle) * ejectSpeed;
+                // Eject p2 as Hawking Radiation into deep space with variable kinetic energy!
+                const energy = Math.random(); // 0 to 1
+                p2.x = mouse.x + (Math.random() - 0.5) * 15;
+                p2.y = mouse.y + (Math.random() - 0.5) * 15;
                 p2.mass = 1;
-                p2.radius = Math.random() * 1.4 + 0.6;
-                p2.color = Math.random() > 0.5 ? '#00f3ff' : '#ff00aa';
-                p2.isEjected = true;
-                p2.ejectTimer = 60; // 60 frames of high speed jet
+                p2.radius = p2.baseRadius;
+                p2.color = particleColors[Math.floor(Math.random() * particleColors.length)];
+
+                const ejectAngle = Math.random() * Math.PI * 2;
+                if (energy > 0.5) {
+                  // High Energy Ejection: Blasts far into deep space, immune to gravity for 4-7 seconds
+                  const speed = Math.random() * 3.5 + 3.0;
+                  p2.vx = Math.cos(ejectAngle) * speed;
+                  p2.vy = Math.sin(ejectAngle) * speed;
+                  p2.immunityTimer = Math.floor(Math.random() * 200) + 200; // Long immunity to escape far
+                } else {
+                  // Low/Medium Energy Ejection: Shorter travel
+                  const speed = Math.random() * 2.0 + 1.2;
+                  p2.vx = Math.cos(ejectAngle) * speed;
+                  p2.vy = Math.sin(ejectAngle) * speed;
+                  p2.immunityTimer = Math.floor(Math.random() * 80) + 60;
+                }
                 break;
               }
             }
@@ -239,29 +267,30 @@ export const CosmosCanvas: React.FC = () => {
         const mdx = p.x - mouse.x;
         const mdy = p.y - mouse.y;
         const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
-        const influenceRadius = 280;
+        const influenceRadius = 220; // Reduced mouse influence radius
 
-        if (mdist > 250) {
+        if (mdist > 180) {
           outerStarCount++;
         }
 
-        if (p.isEjected) {
-          p.ejectTimer--;
-          if (p.ejectTimer <= 0 || mdist > 300) {
-            p.isEjected = false;
-          }
+        if (p.immunityTimer > 0) {
+          p.immunityTimer--;
+          // Decelerate high speed ejection gradually to normal drift speed
+          p.vx *= 0.985;
+          p.vy *= 0.985;
         } else if (mdist < influenceRadius && mdist > 0.1) {
-          const targetDist = 140 + p.orbitOffset;
+          // Tighter mouse orbit radius (~85px + offset)
+          const targetDist = 85 + p.orbitOffset;
           const distDiff = mdist - targetDist;
 
           const ux = mdx / mdist;
           const uy = mdy / mdist;
 
-          const pullForce = -distDiff * 0.0025;
+          const pullForce = -distDiff * 0.0028;
 
           const tx = -uy * p.spin;
           const ty = ux * p.spin;
-          const swirlForce = 0.04;
+          const swirlForce = 0.045;
 
           p.vx += ux * pullForce + tx * swirlForce;
           p.vy += uy * pullForce + ty * swirlForce;
@@ -269,6 +298,7 @@ export const CosmosCanvas: React.FC = () => {
           p.vx *= 0.94;
           p.vy *= 0.94;
         } else {
+          // Drift naturally in deep space
           p.vx += (p.baseVx - p.vx) * 0.03;
           p.vy += (p.baseVy - p.vy) * 0.03;
         }
@@ -282,20 +312,20 @@ export const CosmosCanvas: React.FC = () => {
         if (p.y < -20) p.y = height + 20;
         if (p.y > height + 20) p.y = -20;
 
-        // Render Particle & Glow if merged
+        // Render Particle
         ctx.fillStyle = p.color;
         ctx.globalAlpha = p.alpha;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Extra aura glow for fused super-stars
+        // Subtle aura glow for fused stars
         if (p.mass > 1) {
           ctx.strokeStyle = p.color;
-          ctx.globalAlpha = 0.35;
-          ctx.lineWidth = 1.5;
+          ctx.globalAlpha = 0.3;
+          ctx.lineWidth = 1;
           ctx.beginPath();
-          ctx.arc(p.x, p.y, p.radius + 3, 0, Math.PI * 2);
+          ctx.arc(p.x, p.y, p.radius + 2, 0, Math.PI * 2);
           ctx.stroke();
         }
 
@@ -306,9 +336,9 @@ export const CosmosCanvas: React.FC = () => {
           const pdy = p.y - p2.y;
           const pdist = Math.sqrt(pdx * pdx + pdy * pdy);
 
-          if (pdist < 115) {
+          if (pdist < 100) { // Reduced connection distance for cleaner look
             ctx.strokeStyle = p.color;
-            ctx.globalAlpha = (1 - pdist / 115) * 0.22;
+            ctx.globalAlpha = (1 - pdist / 100) * 0.18;
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(p2.x, p2.y);
@@ -317,31 +347,30 @@ export const CosmosCanvas: React.FC = () => {
         }
       });
 
-      // 4. Density Balance Safety Net: Respawn new stars in deep space if outer region gets too empty
-      if (outerStarCount < Math.floor(numParticles * 0.35)) {
-        // Find a heavily clustered star near mouse and respawn it in deep space far away
+      // 4. Deep Space Respawn Safety Net: Ensure distant space always has stars
+      if (outerStarCount < Math.floor(numParticles * 0.4)) {
         const trappedIndex = particles.findIndex(p => {
           const dx = p.x - mouse.x;
           const dy = p.y - mouse.y;
-          return Math.sqrt(dx * dx + dy * dy) < 140 && !p.isEjected;
+          return Math.sqrt(dx * dx + dy * dy) < 100 && p.immunityTimer <= 0;
         });
 
         if (trappedIndex !== -1) {
           const p = particles[trappedIndex];
-          // Spawn near screen border far from mouse
           const side = Math.floor(Math.random() * 4);
           if (side === 0) { p.x = Math.random() * width; p.y = 10; }
           else if (side === 1) { p.x = width - 10; p.y = Math.random() * height; }
           else if (side === 2) { p.x = Math.random() * width; p.y = height - 10; }
           else { p.x = 10; p.y = Math.random() * height; }
 
-          p.vx = (Math.random() - 0.5) * 0.4;
-          p.vy = (Math.random() - 0.5) * 0.4;
+          p.vx = (Math.random() - 0.5) * 0.45;
+          p.vy = (Math.random() - 0.5) * 0.45;
           p.baseVx = p.vx;
           p.baseVy = p.vy;
           p.mass = 1;
-          p.radius = Math.random() * 1.5 + 0.6;
-          p.color = Math.random() > 0.4 ? '#00f3ff' : Math.random() > 0.5 ? '#ff00aa' : '#8a2be2';
+          p.radius = p.baseRadius;
+          p.color = particleColors[Math.floor(Math.random() * particleColors.length)];
+          p.immunityTimer = 180; // Immune to mouse gravity for 3 seconds so it stays in deep space
         }
       }
 
@@ -351,18 +380,18 @@ export const CosmosCanvas: React.FC = () => {
       const gradient = ctx.createRadialGradient(
         mouse.x,
         mouse.y,
-        10,
+        5,
         mouse.x,
         mouse.y,
-        250
+        180
       );
-      gradient.addColorStop(0, 'rgba(0, 243, 255, 0.08)');
-      gradient.addColorStop(0.5, 'rgba(255, 0, 170, 0.03)');
+      gradient.addColorStop(0, 'rgba(0, 243, 255, 0.07)');
+      gradient.addColorStop(0.5, 'rgba(56, 189, 248, 0.02)');
       gradient.addColorStop(1, 'transparent');
 
       ctx.fillStyle = gradient;
       ctx.beginPath();
-      ctx.arc(mouse.x, mouse.y, 250, 0, Math.PI * 2);
+      ctx.arc(mouse.x, mouse.y, 180, 0, Math.PI * 2);
       ctx.fill();
 
       animationFrameId = requestAnimationFrame(render);
