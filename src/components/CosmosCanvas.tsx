@@ -132,8 +132,8 @@ export const CosmosCanvas: React.FC = () => {
     const neutronStars = Array.from({ length: 3 }, () => ({
       x: Math.random() * (width - 200) + 100,
       y: Math.random() * (height - 200) + 100,
-      vx: (Math.random() - 0.5) * 0.35,
-      vy: (Math.random() - 0.5) * 0.35,
+      vx: (Math.random() - 0.5) * 0.10,
+      vy: (Math.random() - 0.5) * 0.10,
       radius: 3.6,
       mass: 12, // Heavy mass -> resists mouse gravity
       color: '#fbbf24', // Golden Yellow
@@ -491,14 +491,21 @@ export const CosmosCanvas: React.FC = () => {
         const n1 = neutronStars[i];
         if (n1.collisionCooldown > 0) n1.collisionCooldown--;
 
-        // Heavy resist mouse gravity
+        // Heavy resist mouse gravity (extremely tiny pull)
         const ndx = mouse.x - n1.x;
         const ndy = mouse.y - n1.y;
         const ndist = Math.hypot(ndx, ndy);
-        if (ndist < 220 && ndist > 0.1) {
-          // Only 12% mouse pull due to extreme mass
-          n1.vx += (ndx / ndist) * 0.008;
-          n1.vy += (ndy / ndist) * 0.008;
+        if (ndist < 200 && ndist > 0.1) {
+          // Extremely minor mouse pull due to massive weight
+          n1.vx += (ndx / ndist) * 0.0010;
+          n1.vy += (ndy / ndist) * 0.0010;
+        }
+
+        // Keep neutron star movement heavy and slow
+        const curSpeed = Math.hypot(n1.vx, n1.vy);
+        if (curSpeed > 0.20) {
+          n1.vx *= 0.96;
+          n1.vy *= 0.96;
         }
 
         n1.x += n1.vx;
