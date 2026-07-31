@@ -141,16 +141,20 @@ export const CosmosCanvas: React.FC = () => {
       collisionCooldown: 0,
     }));
 
-    // Kilonova Spacetime Ripple Waves
-    interface KilonovaRipple {
+    // Kilonova & Mouse Velocity Spacetime Ripple Waves
+    interface SpacetimeRipple {
       x: number;
       y: number;
+      vx?: number;
+      vy?: number;
       radius: number;
       maxRadius: number;
       strength: number;
       alpha: number;
     }
-    let kilonovaRipples: KilonovaRipple[] = [];
+    let kilonovaRipples: SpacetimeRipple[] = [];
+    let mouseWakeRipples: SpacetimeRipple[] = [];
+    let lastWakeSpawnPos = { x: mouse.x, y: mouse.y };
 
     // 8 Authentic Constellations Templates (Strictly English Labels)
     const constellationTemplates = [
@@ -397,7 +401,41 @@ export const CosmosCanvas: React.FC = () => {
         return r.radius < r.maxRadius && r.alpha > 0.01;
       });
 
-      // 1. Render Spacetime Grid Warping with Kilonova Distortion Ripples
+      // Calculate real-time mouse motion speed & vector for Gravitational Ship Wake
+      const mouseSpeedX = mouse.targetX - prevMousePos.x;
+      const mouseSpeedY = mouse.targetY - prevMousePos.y;
+      const mouseSpeed = Math.hypot(mouseSpeedX, mouseSpeedY);
+      prevMousePos = { x: mouse.targetX, y: mouse.targetY };
+
+      // Spawn trailing mouse wake ripples proportional to mouse movement speed
+      const distFromLastWake = Math.hypot(mouse.x - lastWakeSpawnPos.x, mouse.y - lastWakeSpawnPos.y);
+      if (mouseSpeed > 1.5 && distFromLastWake > 10) {
+        lastWakeSpawnPos = { x: mouse.x, y: mouse.y };
+        const wakeStrength = Math.min(48, mouseSpeed * 1.6);
+        const wakeMaxRadius = Math.min(260, 100 + mouseSpeed * 7);
+
+        mouseWakeRipples.push({
+          x: mouse.x,
+          y: mouse.y,
+          vx: -mouseSpeedX * 0.05,
+          vy: -mouseSpeedY * 0.05,
+          radius: 8,
+          maxRadius: wakeMaxRadius,
+          strength: wakeStrength,
+          alpha: 0.7,
+        });
+      }
+
+      // Update Mouse Wake Ripples
+      mouseWakeRipples = mouseWakeRipples.filter(w => {
+        w.radius += 4.5 + w.strength * 0.06;
+        w.x += (w.vx || 0);
+        w.y += (w.vy || 0);
+        w.alpha *= 0.945;
+        return w.radius < w.maxRadius && w.alpha > 0.01;
+      });
+
+      // 1. Render Spacetime Grid Warping with Kilonova & Mouse Trailing Wake Ripples
       ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
       ctx.lineWidth = 1;
 
@@ -422,7 +460,7 @@ export const CosmosCanvas: React.FC = () => {
             warpY += (dy / dist) * force;
           }
 
-          // Apply Kilonova Gravitational Wave Ripples on Spacetime Grid!
+          // Apply Kilonova Gravitational Wave Ripples on Spacetime Grid
           kilonovaRipples.forEach(r => {
             const rdx = warpX - r.x;
             const rdy = warpY - r.y;
@@ -432,6 +470,20 @@ export const CosmosCanvas: React.FC = () => {
               const waveForce = Math.sin((waveDist / 70) * Math.PI) * r.strength * (1 - r.radius / r.maxRadius) * r.alpha;
               warpX += (rdx / rdist) * waveForce;
               warpY += (rdy / rdist) * waveForce;
+            }
+          });
+
+          // Apply trailing Mouse Gravitational Velocity Wake Ripples on Spacetime Grid!
+          mouseWakeRipples.forEach(w => {
+            const wdx = warpX - w.x;
+            const wdy = warpY - w.y;
+            const wdist = Math.hypot(wdx, wdy) || 1;
+            const distFromWaveFront = Math.abs(wdist - w.radius);
+            if (distFromWaveFront < 55) {
+              const wavePhase = (distFromWaveFront / 55) * Math.PI;
+              const waveForce = Math.sin(wavePhase) * w.strength * (1 - w.radius / w.maxRadius) * w.alpha;
+              warpX += (wdx / wdist) * waveForce;
+              warpY += (wdy / wdist) * waveForce;
             }
           });
 
@@ -474,6 +526,19 @@ export const CosmosCanvas: React.FC = () => {
               const waveForce = Math.sin((waveDist / 70) * Math.PI) * r.strength * (1 - r.radius / r.maxRadius) * r.alpha;
               warpX += (rdx / rdist) * waveForce;
               warpY += (rdy / rdist) * waveForce;
+            }
+          });
+
+          mouseWakeRipples.forEach(w => {
+            const wdx = warpX - w.x;
+            const wdy = warpY - w.y;
+            const wdist = Math.hypot(wdx, wdy) || 1;
+            const distFromWaveFront = Math.abs(wdist - w.radius);
+            if (distFromWaveFront < 55) {
+              const wavePhase = (distFromWaveFront / 55) * Math.PI;
+              const waveForce = Math.sin(wavePhase) * w.strength * (1 - w.radius / w.maxRadius) * w.alpha;
+              warpX += (wdx / wdist) * waveForce;
+              warpY += (wdy / wdist) * waveForce;
             }
           });
 
