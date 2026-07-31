@@ -66,10 +66,24 @@ export const CosmosCanvas: React.FC = () => {
       } catch (e) {}
     };
 
-    // Mouse interactive coords & Idle state tracking
+    // Mouse interactive coords, Velocity, Acceleration & Idle state tracking
     let mouse = { x: width / 2, y: height / 2, targetX: width / 2, targetY: height / 2 };
     let lastMouseMoved = Date.now();
     let prevMousePos = { x: width / 2, y: height / 2 };
+    let lastMousePosTime = Date.now();
+    let lastMouseVel = 0;
+    let lastMouseWaveTime = 0;
+
+    // Mouse Acceleration Gravitational Wave Ripples
+    interface SpacetimeWave {
+      x: number;
+      y: number;
+      radius: number;
+      maxRadius: number;
+      strength: number;
+      alpha: number;
+    }
+    let mouseWaveRipples: SpacetimeWave[] = [];
 
     // Supernova Implosion & Blast state
     let isCollapsing = false;
@@ -83,11 +97,39 @@ export const CosmosCanvas: React.FC = () => {
       mouse.targetX = e.clientX;
       mouse.targetY = e.clientY;
 
-      const distMoved = Math.hypot(e.clientX - prevMousePos.x, e.clientY - prevMousePos.y);
-      if (distMoved > 6) {
-        lastMouseMoved = Date.now();
+      const now = Date.now();
+      const dt = Math.max(1, now - lastMousePosTime);
+      const dx = e.clientX - prevMousePos.x;
+      const dy = e.clientY - prevMousePos.y;
+      const distMoved = Math.hypot(dx, dy);
+
+      const vel = distMoved / dt; // Speed in px/ms
+      const accel = Math.abs(vel - lastMouseVel);
+
+      if (distMoved > 2) {
+        lastMouseMoved = now;
+
+        // Emit Gravitational Waves based on Mouse Velocity & Acceleration!
+        const waveIntensity = Math.min(1.0, vel * 0.9 + accel * 2.5);
+        const minGap = Math.max(30, 100 - waveIntensity * 60);
+
+        if (now - lastMouseWaveTime > minGap) {
+          lastMouseWaveTime = now;
+          mouseWaveRipples.push({
+            x: e.clientX,
+            y: e.clientY,
+            radius: 4,
+            maxRadius: 140 + waveIntensity * 260,
+            strength: 35 + waveIntensity * 70, // Wave crest displacement
+            alpha: 0.85 + waveIntensity * 0.15,
+          });
+        }
+
         prevMousePos = { x: e.clientX, y: e.clientY };
       }
+
+      lastMouseVel = vel;
+      lastMousePosTime = now;
 
       if (!audioCtx) {
         try {
@@ -135,8 +177,8 @@ export const CosmosCanvas: React.FC = () => {
       vx: (Math.random() - 0.5) * 0.10,
       vy: (Math.random() - 0.5) * 0.10,
       radius: 3.6,
-      mass: 12, // Heavy mass -> resists mouse gravity
-      color: '#fbbf24', // Golden Yellow
+      mass: 12,
+      color: '#fbbf24',
       glowColor: 'rgba(245, 158, 11, 0.45)',
       collisionCooldown: 0,
     }));
@@ -152,7 +194,7 @@ export const CosmosCanvas: React.FC = () => {
     }
     let kilonovaRipples: KilonovaRipple[] = [];
 
-    // 8 Authentic Constellations Templates (Strictly English Labels)
+    // 8 Authentic Constellations Templates
     const constellationTemplates = [
       {
         name: '✨ Ursa Major',
@@ -276,7 +318,6 @@ export const CosmosCanvas: React.FC = () => {
     let activeConstellations: ActiveConstellation[] = [];
     let nextConstellationSpawnTime = Date.now() + 2000;
 
-    // Helper to spawn a new drifting constellation
     const spawnConstellation = (customX?: number, customY?: number) => {
       const templateIdx = Math.floor(Math.random() * constellationTemplates.length);
       const tmpl = constellationTemplates[templateIdx];
@@ -320,14 +361,13 @@ export const CosmosCanvas: React.FC = () => {
       }
     };
 
-    // Pre-spawn 2 or 3 constellations immediately on page load so viewer is wowed!
     setTimeout(() => {
       spawnConstellation(width * 0.3, height * 0.35);
       spawnConstellation(width * 0.7, height * 0.65);
     }, 100);
 
-    // Spacetime Grid setup
-    const gridSize = 60;
+    // Doubled Grid Density (gridSize = 35px for sharp, high-res spacetime mesh)
+    const gridSize = 35;
     const cols = Math.ceil(width / gridSize) + 2;
     const rows = Math.ceil(height / gridSize) + 2;
 
@@ -339,7 +379,6 @@ export const CosmosCanvas: React.FC = () => {
 
       const now = Date.now();
 
-      // Trapped stars count near mouse
       let trappedStarsCount = 0;
       particles.forEach(p => {
         const dx = p.x - mouse.x;
@@ -349,7 +388,6 @@ export const CosmosCanvas: React.FC = () => {
         }
       });
 
-      // Supernova trigger condition
       if (
         trappedStarsCount >= 5 &&
         now - lastMouseMoved > 3000 &&
@@ -371,7 +409,6 @@ export const CosmosCanvas: React.FC = () => {
           shockwaveRadius = 15;
           playSubtleFusionSound(500, 100);
 
-          // Supernova blasts all particles and dissolves all active constellations!
           particles.forEach(p => {
             const angle = Math.atan2(p.y - mouse.y, p.x - mouse.x) || Math.random() * Math.PI * 2;
             const speed = Math.random() * 5.5 + 4.0;
@@ -390,19 +427,24 @@ export const CosmosCanvas: React.FC = () => {
         }
       }
 
-      // Update Kilonova Ripples
+      // Update Mouse Acceleration Waves & Kilonova Waves
+      mouseWaveRipples = mouseWaveRipples.filter(w => {
+        w.radius += 5.5;
+        w.alpha *= 0.96;
+        return w.radius < w.maxRadius && w.alpha > 0.015;
+      });
+
       kilonovaRipples = kilonovaRipples.filter(r => {
-        r.radius += 14;
+        r.radius += 12;
         r.alpha *= 0.955;
         return r.radius < r.maxRadius && r.alpha > 0.01;
       });
 
-      // 1. Render Spacetime Grid Warping with Kilonova Distortion Ripples
-      ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
-      ctx.lineWidth = 1;
+      // 1. High-Performance 60fps Spacetime Grid calculation
+      const gridPoints: { warpX: number; warpY: number; waveGlow: number }[][] = [];
 
       for (let i = 0; i < cols; i++) {
-        ctx.beginPath();
+        gridPoints[i] = [];
         for (let j = 0; j < rows; j++) {
           const gx = i * gridSize;
           const gy = j * gridSize;
@@ -410,80 +452,111 @@ export const CosmosCanvas: React.FC = () => {
           const dx = mouse.x - gx;
           const dy = mouse.y - gy;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const maxDist = isCollapsing ? 380 : 220;
+          const maxDist = isCollapsing ? 380 : 200;
 
           let warpX = gx;
           let warpY = gy;
+          let waveGlow = 0;
 
           if (dist < maxDist) {
-            const warpStrength = isCollapsing ? 65 : 28;
+            const warpStrength = isCollapsing ? 65 : 26;
             const force = (1 - dist / maxDist) * warpStrength;
             warpX += (dx / dist) * force;
             warpY += (dy / dist) * force;
           }
 
-          // Apply Kilonova Gravitational Wave Ripples on Spacetime Grid!
+          // Apply Mouse Acceleration Gravitational Waves!
+          mouseWaveRipples.forEach(w => {
+            const wdx = warpX - w.x;
+            const wdy = warpY - w.y;
+            const wdist = Math.hypot(wdx, wdy) || 1;
+            const waveDist = Math.abs(wdist - w.radius);
+            if (waveDist < 65) {
+              const wavePhase = (waveDist / 65) * Math.PI;
+              const waveForce = Math.sin(wavePhase) * w.strength * (1 - w.radius / w.maxRadius) * w.alpha;
+              warpX += (wdx / wdist) * waveForce;
+              warpY += (wdy / wdist) * waveForce;
+              waveGlow = Math.max(waveGlow, (1 - waveDist / 65) * w.alpha);
+            }
+          });
+
+          // Apply Kilonova Gravitational Waves!
           kilonovaRipples.forEach(r => {
             const rdx = warpX - r.x;
             const rdy = warpY - r.y;
             const rdist = Math.hypot(rdx, rdy) || 1;
             const waveDist = Math.abs(rdist - r.radius);
-            if (waveDist < 70) {
-              const waveForce = Math.sin((waveDist / 70) * Math.PI) * r.strength * (1 - r.radius / r.maxRadius) * r.alpha;
+            if (waveDist < 75) {
+              const waveForce = Math.sin((waveDist / 75) * Math.PI) * r.strength * (1 - r.radius / r.maxRadius) * r.alpha;
               warpX += (rdx / rdist) * waveForce;
               warpY += (rdy / rdist) * waveForce;
+              waveGlow = Math.max(waveGlow, (1 - waveDist / 75) * r.alpha * 1.2);
             }
           });
 
-          if (j === 0) {
-            ctx.moveTo(warpX, warpY);
-          } else {
-            ctx.lineTo(warpX, warpY);
+          gridPoints[i][j] = { warpX, warpY, waveGlow };
+        }
+      }
+
+      // Fast Batched Rendering for Baseline Cyan Grid (Restored soft subtle dark cyan background!)
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+
+      for (let i = 0; i < cols; i++) {
+        for (let j = 0; j < rows - 1; j++) {
+          const p1 = gridPoints[i][j];
+          const p2 = gridPoints[i][j + 1];
+          if (p1.waveGlow <= 0.06 && p2.waveGlow <= 0.06) {
+            ctx.moveTo(p1.warpX, p1.warpY);
+            ctx.lineTo(p2.warpX, p2.warpY);
           }
         }
-        ctx.stroke();
       }
 
       for (let j = 0; j < rows; j++) {
-        ctx.beginPath();
-        for (let i = 0; i < cols; i++) {
-          const gx = i * gridSize;
-          const gy = j * gridSize;
-
-          const dx = mouse.x - gx;
-          const dy = mouse.y - gy;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          const maxDist = isCollapsing ? 380 : 220;
-
-          let warpX = gx;
-          let warpY = gy;
-
-          if (dist < maxDist) {
-            const warpStrength = isCollapsing ? 65 : 28;
-            const force = (1 - dist / maxDist) * warpStrength;
-            warpX += (dx / dist) * force;
-            warpY += (dy / dist) * force;
-          }
-
-          kilonovaRipples.forEach(r => {
-            const rdx = warpX - r.x;
-            const rdy = warpY - r.y;
-            const rdist = Math.hypot(rdx, rdy) || 1;
-            const waveDist = Math.abs(rdist - r.radius);
-            if (waveDist < 70) {
-              const waveForce = Math.sin((waveDist / 70) * Math.PI) * r.strength * (1 - r.radius / r.maxRadius) * r.alpha;
-              warpX += (rdx / rdist) * waveForce;
-              warpY += (rdy / rdist) * waveForce;
-            }
-          });
-
-          if (i === 0) {
-            ctx.moveTo(warpX, warpY);
-          } else {
-            ctx.lineTo(warpX, warpY);
+        for (let i = 0; i < cols - 1; i++) {
+          const p1 = gridPoints[i][j];
+          const p2 = gridPoints[i + 1][j];
+          if (p1.waveGlow <= 0.06 && p2.waveGlow <= 0.06) {
+            ctx.moveTo(p1.warpX, p1.warpY);
+            ctx.lineTo(p2.warpX, p2.warpY);
           }
         }
-        ctx.stroke();
+      }
+      ctx.stroke();
+
+      // Render Wave Crests: Wave peak lines turn into Warm Cosmic Amber/Gold (#d97706 / #f59e0b) expanding outward!
+      for (let i = 0; i < cols; i++) {
+        for (let j = 0; j < rows - 1; j++) {
+          const p1 = gridPoints[i][j];
+          const p2 = gridPoints[i][j + 1];
+          const avgGlow = (p1.waveGlow + p2.waveGlow) / 2;
+          if (avgGlow > 0.06) {
+            ctx.beginPath();
+            ctx.moveTo(p1.warpX, p1.warpY);
+            ctx.lineTo(p2.warpX, p2.warpY);
+            ctx.strokeStyle = `rgba(245, 158, 11, ${Math.min(0.65, avgGlow * 0.7)})`; // Dark Golden Amber Wave Peak
+            ctx.lineWidth = 1 + avgGlow * 1.5;
+            ctx.stroke();
+          }
+        }
+      }
+
+      for (let j = 0; j < rows; j++) {
+        for (let i = 0; i < cols - 1; i++) {
+          const p1 = gridPoints[i][j];
+          const p2 = gridPoints[i + 1][j];
+          const avgGlow = (p1.waveGlow + p2.waveGlow) / 2;
+          if (avgGlow > 0.06) {
+            ctx.beginPath();
+            ctx.moveTo(p1.warpX, p1.warpY);
+            ctx.lineTo(p2.warpX, p2.warpY);
+            ctx.strokeStyle = `rgba(245, 158, 11, ${Math.min(0.65, avgGlow * 0.7)})`;
+            ctx.lineWidth = 1 + avgGlow * 1.5;
+            ctx.stroke();
+          }
+        }
       }
 
       // 2. Heavy Golden Neutron Stars Collision & Physics Engine
@@ -491,17 +564,14 @@ export const CosmosCanvas: React.FC = () => {
         const n1 = neutronStars[i];
         if (n1.collisionCooldown > 0) n1.collisionCooldown--;
 
-        // Heavy resist mouse gravity (extremely tiny pull)
         const ndx = mouse.x - n1.x;
         const ndy = mouse.y - n1.y;
         const ndist = Math.hypot(ndx, ndy);
         if (ndist < 200 && ndist > 0.1) {
-          // Extremely minor mouse pull due to massive weight
           n1.vx += (ndx / ndist) * 0.0010;
           n1.vy += (ndy / ndist) * 0.0010;
         }
 
-        // Keep neutron star movement heavy and slow
         const curSpeed = Math.hypot(n1.vx, n1.vy);
         if (curSpeed > 0.20) {
           n1.vx *= 0.96;
@@ -511,11 +581,9 @@ export const CosmosCanvas: React.FC = () => {
         n1.x += n1.vx;
         n1.y += n1.vy;
 
-        // Bounce off canvas boundaries
         if (n1.x < 30 || n1.x > width - 30) n1.vx *= -1;
         if (n1.y < 30 || n1.y > height - 30) n1.vy *= -1;
 
-        // Pairwise collision check for Neutron Star Kilonova Wave
         for (let j = i + 1; j < neutronStars.length; j++) {
           const n2 = neutronStars[j];
           const cdx = n1.x - n2.x;
@@ -526,28 +594,24 @@ export const CosmosCanvas: React.FC = () => {
             n1.collisionCooldown = 60;
             n2.collisionCooldown = 60;
 
-            // Elastic bounce
             n1.vx *= -1;
             n1.vy *= -1;
             n2.vx *= -1;
             n2.vy *= -1;
 
-            // KILONOVA GRAVITATIONAL WAVE RIPPLE!
             kilonovaRipples.push({
               x: (n1.x + n2.x) / 2,
               y: (n1.y + n2.y) / 2,
               radius: 10,
               maxRadius: Math.max(width, height) * 0.85,
-              strength: 45,
-              alpha: 0.8,
+              strength: 55,
+              alpha: 0.85,
             });
 
-            // Deep cosmic bass rumble
             playSubtleFusionSound(120, 40, 'triangle', 0.03);
           }
         }
 
-        // Render Golden Neutron Star & Pulsing Aura
         ctx.save();
         ctx.fillStyle = n1.color;
         ctx.shadowColor = '#f59e0b';
@@ -632,16 +696,14 @@ export const CosmosCanvas: React.FC = () => {
         spawnConstellation();
       }
 
-      // Update & Render Active Constellations (Smooth Drift & Mouse Dissolution)
+      // Update & Render Active Constellations
       activeConstellations = activeConstellations.filter(c => {
         const tmpl = constellationTemplates[c.templateIdx];
 
-        // Smooth spiral/curved drift
         c.centerX += c.vx;
         c.centerY += c.vy;
         c.rotationAngle += c.angularVelocity;
 
-        // Wrap constellation center around edges
         if (c.centerX < 100) c.vx = Math.abs(c.vx);
         if (c.centerX > width - 100) c.vx = -Math.abs(c.vx);
         if (c.centerY < 100) c.vy = Math.abs(c.vy);
@@ -652,7 +714,6 @@ export const CosmosCanvas: React.FC = () => {
 
         let isMouseNearConstellation = false;
 
-        // Update target positions for assigned particles
         c.particleIndices.forEach((pIdx, nodeIdx) => {
           const p = particles[pIdx];
           if (p) {
@@ -663,7 +724,6 @@ export const CosmosCanvas: React.FC = () => {
             const targetX = c.centerX + rx;
             const targetY = c.centerY + ry;
 
-            // Mouse proximity dissolution check
             const mdist = Math.hypot(targetX - mouse.x, targetY - mouse.y);
             if (mdist < 100) {
               isMouseNearConstellation = true;
@@ -675,7 +735,6 @@ export const CosmosCanvas: React.FC = () => {
           }
         });
 
-        // Trigger dissolution if mouse gets close
         if (isMouseNearConstellation && !c.isDissolving) {
           c.isDissolving = true;
         }
@@ -683,15 +742,13 @@ export const CosmosCanvas: React.FC = () => {
         if (c.isDissolving) {
           c.dissolveTimer--;
           if (c.dissolveTimer <= 0) {
-            // Unbind particles back to regular drifting stars
             c.particleIndices.forEach(idx => {
               if (particles[idx]) particles[idx].constellationTarget = null;
             });
-            return false; // Remove constellation
+            return false;
           }
         }
 
-        // Render Constellation Glowing Lines & Title
         const fadeAlpha = c.isDissolving ? (c.dissolveTimer / 30) * 0.7 : 0.75;
         ctx.save();
         ctx.strokeStyle = '#00f3ff';
@@ -714,7 +771,6 @@ export const CosmosCanvas: React.FC = () => {
           }
         });
 
-        // English Title Label floating with constellation
         ctx.font = '11px monospace';
         ctx.fillStyle = '#00f3ff';
         ctx.textAlign = 'center';
@@ -802,7 +858,6 @@ export const CosmosCanvas: React.FC = () => {
           ctx.stroke();
         }
 
-        // Connect nearby particles with random energy lines
         for (let j = idx + 1; j < particles.length; j++) {
           const p2 = particles[j];
           const pdx = p.x - p2.x;
@@ -820,13 +875,13 @@ export const CosmosCanvas: React.FC = () => {
         }
       });
 
-      // 6. Draw Kilonova Gravitational Wave Shockwaves
+      // 6. Draw Expanding Kilonova Gravitational Wave Rings
       kilonovaRipples.forEach(r => {
         ctx.save();
-        ctx.strokeStyle = 'rgba(251, 191, 36, ' + (r.alpha * 0.5) + ')';
+        ctx.strokeStyle = 'rgba(251, 191, 36, ' + (r.alpha * 0.6) + ')';
         ctx.shadowColor = '#f59e0b';
-        ctx.shadowBlur = 16;
-        ctx.lineWidth = 2.0;
+        ctx.shadowBlur = 18;
+        ctx.lineWidth = 2.2;
         ctx.beginPath();
         ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
         ctx.stroke();
@@ -882,7 +937,7 @@ export const CosmosCanvas: React.FC = () => {
 
       ctx.globalAlpha = 1;
 
-      // 9. Central Event Horizon subtle aura around mouse
+      // 9. Central Event Horizon subtle aura around mouse (Soft & Non-intrusive)
       const gradient = ctx.createRadialGradient(
         mouse.x,
         mouse.y,
@@ -891,8 +946,8 @@ export const CosmosCanvas: React.FC = () => {
         mouse.y,
         180
       );
-      gradient.addColorStop(0, 'rgba(0, 243, 255, 0.07)');
-      gradient.addColorStop(0.5, 'rgba(56, 189, 248, 0.02)');
+      gradient.addColorStop(0, 'rgba(0, 243, 255, 0.04)');
+      gradient.addColorStop(0.5, 'rgba(56, 189, 248, 0.015)');
       gradient.addColorStop(1, 'transparent');
 
       ctx.fillStyle = gradient;
