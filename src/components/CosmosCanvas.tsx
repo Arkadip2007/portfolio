@@ -109,9 +109,9 @@ export const CosmosCanvas: React.FC = () => {
       if (distMoved > 2) {
         lastMouseMoved = now;
 
-        // Emit HIGHLY VISIBLE Gravitational Waves based on Mouse Velocity & Acceleration!
+        // Emit Gravitational Waves based on Mouse Velocity & Acceleration!
         const waveIntensity = Math.min(1.0, vel * 0.9 + accel * 2.5);
-        const minGap = Math.max(25, 90 - waveIntensity * 55);
+        const minGap = Math.max(30, 100 - waveIntensity * 60);
 
         if (now - lastMouseWaveTime > minGap) {
           lastMouseWaveTime = now;
@@ -119,8 +119,8 @@ export const CosmosCanvas: React.FC = () => {
             x: e.clientX,
             y: e.clientY,
             radius: 4,
-            maxRadius: 150 + waveIntensity * 280,
-            strength: 40 + waveIntensity * 85, // STRONGER WAVE AMPLITUDE (up to 125px displacement!)
+            maxRadius: 140 + waveIntensity * 260,
+            strength: 35 + waveIntensity * 70, // Wave crest displacement
             alpha: 0.85 + waveIntensity * 0.15,
           });
         }
@@ -366,8 +366,8 @@ export const CosmosCanvas: React.FC = () => {
       spawnConstellation(width * 0.7, height * 0.65);
     }, 100);
 
-    // Spacetime Grid setup
-    const gridSize = 50; // Slightly tighter grid density for sharper wave rendering
+    // Doubled Grid Density (gridSize = 35px for sharp, high-res spacetime mesh)
+    const gridSize = 35;
     const cols = Math.ceil(width / gridSize) + 2;
     const rows = Math.ceil(height / gridSize) + 2;
 
@@ -427,21 +427,20 @@ export const CosmosCanvas: React.FC = () => {
         }
       }
 
-      // Update Mouse Acceleration Gravitational Waves & Kilonova Waves
+      // Update Mouse Acceleration Waves & Kilonova Waves
       mouseWaveRipples = mouseWaveRipples.filter(w => {
-        w.radius += 6.5;
-        w.alpha *= 0.965;
+        w.radius += 5.5;
+        w.alpha *= 0.96;
         return w.radius < w.maxRadius && w.alpha > 0.015;
       });
 
       kilonovaRipples = kilonovaRipples.filter(r => {
-        r.radius += 14;
+        r.radius += 12;
         r.alpha *= 0.955;
         return r.radius < r.maxRadius && r.alpha > 0.01;
       });
 
-      // 1. Render Spacetime Grid Warping & STRONGLY VISIBLE Gravitational Waves
-      // Calculate displaced grid points matrix
+      // 1. High-Performance 60fps Spacetime Grid calculation
       const gridPoints: { warpX: number; warpY: number; waveGlow: number }[][] = [];
 
       for (let i = 0; i < cols; i++) {
@@ -453,14 +452,14 @@ export const CosmosCanvas: React.FC = () => {
           const dx = mouse.x - gx;
           const dy = mouse.y - gy;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const maxDist = isCollapsing ? 380 : 220;
+          const maxDist = isCollapsing ? 380 : 200;
 
           let warpX = gx;
           let warpY = gy;
           let waveGlow = 0;
 
           if (dist < maxDist) {
-            const warpStrength = isCollapsing ? 65 : 32;
+            const warpStrength = isCollapsing ? 65 : 26;
             const force = (1 - dist / maxDist) * warpStrength;
             warpX += (dx / dist) * force;
             warpY += (dy / dist) * force;
@@ -472,12 +471,12 @@ export const CosmosCanvas: React.FC = () => {
             const wdy = warpY - w.y;
             const wdist = Math.hypot(wdx, wdy) || 1;
             const waveDist = Math.abs(wdist - w.radius);
-            if (waveDist < 75) {
-              const wavePhase = (waveDist / 75) * Math.PI;
+            if (waveDist < 65) {
+              const wavePhase = (waveDist / 65) * Math.PI;
               const waveForce = Math.sin(wavePhase) * w.strength * (1 - w.radius / w.maxRadius) * w.alpha;
               warpX += (wdx / wdist) * waveForce;
               warpY += (wdy / wdist) * waveForce;
-              waveGlow = Math.max(waveGlow, (1 - waveDist / 75) * w.alpha);
+              waveGlow = Math.max(waveGlow, (1 - waveDist / 65) * w.alpha);
             }
           });
 
@@ -487,11 +486,11 @@ export const CosmosCanvas: React.FC = () => {
             const rdy = warpY - r.y;
             const rdist = Math.hypot(rdx, rdy) || 1;
             const waveDist = Math.abs(rdist - r.radius);
-            if (waveDist < 80) {
-              const waveForce = Math.sin((waveDist / 80) * Math.PI) * r.strength * (1 - r.radius / r.maxRadius) * r.alpha;
+            if (waveDist < 75) {
+              const waveForce = Math.sin((waveDist / 75) * Math.PI) * r.strength * (1 - r.radius / r.maxRadius) * r.alpha;
               warpX += (rdx / rdist) * waveForce;
               warpY += (rdy / rdist) * waveForce;
-              waveGlow = Math.max(waveGlow, (1 - waveDist / 80) * r.alpha * 1.2);
+              waveGlow = Math.max(waveGlow, (1 - waveDist / 75) * r.alpha * 1.2);
             }
           });
 
@@ -499,49 +498,64 @@ export const CosmosCanvas: React.FC = () => {
         }
       }
 
-      // Draw Vertical Grid Lines with Dynamic Wave Glow
+      // Fast Batched Rendering for Baseline Cyan Grid (Restored soft subtle dark cyan background!)
+      ctx.strokeStyle = 'rgba(0, 243, 255, 0.05)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+
+      for (let i = 0; i < cols; i++) {
+        for (let j = 0; j < rows - 1; j++) {
+          const p1 = gridPoints[i][j];
+          const p2 = gridPoints[i][j + 1];
+          if (p1.waveGlow <= 0.06 && p2.waveGlow <= 0.06) {
+            ctx.moveTo(p1.warpX, p1.warpY);
+            ctx.lineTo(p2.warpX, p2.warpY);
+          }
+        }
+      }
+
+      for (let j = 0; j < rows; j++) {
+        for (let i = 0; i < cols - 1; i++) {
+          const p1 = gridPoints[i][j];
+          const p2 = gridPoints[i + 1][j];
+          if (p1.waveGlow <= 0.06 && p2.waveGlow <= 0.06) {
+            ctx.moveTo(p1.warpX, p1.warpY);
+            ctx.lineTo(p2.warpX, p2.warpY);
+          }
+        }
+      }
+      ctx.stroke();
+
+      // Render Wave Crests: Wave peak lines turn into Warm Cosmic Amber/Gold (#d97706 / #f59e0b) expanding outward!
       for (let i = 0; i < cols; i++) {
         for (let j = 0; j < rows - 1; j++) {
           const p1 = gridPoints[i][j];
           const p2 = gridPoints[i][j + 1];
           const avgGlow = (p1.waveGlow + p2.waveGlow) / 2;
-
-          ctx.beginPath();
-          ctx.moveTo(p1.warpX, p1.warpY);
-          ctx.lineTo(p2.warpX, p2.warpY);
-
-          if (avgGlow > 0.05) {
-            // Bright glowing neon cyan stroke when wave passes!
-            ctx.strokeStyle = `rgba(0, 243, 255, ${Math.min(0.75, 0.14 + avgGlow * 0.65)})`;
-            ctx.lineWidth = 1 + avgGlow * 1.8;
-          } else {
-            // Clean visible baseline stroke
-            ctx.strokeStyle = 'rgba(0, 243, 255, 0.12)';
-            ctx.lineWidth = 1;
+          if (avgGlow > 0.06) {
+            ctx.beginPath();
+            ctx.moveTo(p1.warpX, p1.warpY);
+            ctx.lineTo(p2.warpX, p2.warpY);
+            ctx.strokeStyle = `rgba(245, 158, 11, ${Math.min(0.65, avgGlow * 0.7)})`; // Dark Golden Amber Wave Peak
+            ctx.lineWidth = 1 + avgGlow * 1.5;
+            ctx.stroke();
           }
-          ctx.stroke();
         }
       }
 
-      // Draw Horizontal Grid Lines with Dynamic Wave Glow
       for (let j = 0; j < rows; j++) {
         for (let i = 0; i < cols - 1; i++) {
           const p1 = gridPoints[i][j];
           const p2 = gridPoints[i + 1][j];
           const avgGlow = (p1.waveGlow + p2.waveGlow) / 2;
-
-          ctx.beginPath();
-          ctx.moveTo(p1.warpX, p1.warpY);
-          ctx.lineTo(p2.warpX, p2.warpY);
-
-          if (avgGlow > 0.05) {
-            ctx.strokeStyle = `rgba(0, 243, 255, ${Math.min(0.75, 0.14 + avgGlow * 0.65)})`;
-            ctx.lineWidth = 1 + avgGlow * 1.8;
-          } else {
-            ctx.strokeStyle = 'rgba(0, 243, 255, 0.12)';
-            ctx.lineWidth = 1;
+          if (avgGlow > 0.06) {
+            ctx.beginPath();
+            ctx.moveTo(p1.warpX, p1.warpY);
+            ctx.lineTo(p2.warpX, p2.warpY);
+            ctx.strokeStyle = `rgba(245, 158, 11, ${Math.min(0.65, avgGlow * 0.7)})`;
+            ctx.lineWidth = 1 + avgGlow * 1.5;
+            ctx.stroke();
           }
-          ctx.stroke();
         }
       }
 
@@ -590,8 +604,8 @@ export const CosmosCanvas: React.FC = () => {
               y: (n1.y + n2.y) / 2,
               radius: 10,
               maxRadius: Math.max(width, height) * 0.85,
-              strength: 65, // Stronger Kilonova Spacetime Ripple!
-              alpha: 0.9,
+              strength: 55,
+              alpha: 0.85,
             });
 
             playSubtleFusionSound(120, 40, 'triangle', 0.03);
@@ -923,7 +937,7 @@ export const CosmosCanvas: React.FC = () => {
 
       ctx.globalAlpha = 1;
 
-      // 9. Central Event Horizon subtle aura around mouse
+      // 9. Central Event Horizon subtle aura around mouse (Soft & Non-intrusive)
       const gradient = ctx.createRadialGradient(
         mouse.x,
         mouse.y,
@@ -932,8 +946,8 @@ export const CosmosCanvas: React.FC = () => {
         mouse.y,
         180
       );
-      gradient.addColorStop(0, 'rgba(0, 243, 255, 0.07)');
-      gradient.addColorStop(0.5, 'rgba(56, 189, 248, 0.02)');
+      gradient.addColorStop(0, 'rgba(0, 243, 255, 0.04)');
+      gradient.addColorStop(0.5, 'rgba(56, 189, 248, 0.015)');
       gradient.addColorStop(1, 'transparent');
 
       ctx.fillStyle = gradient;
