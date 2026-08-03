@@ -29,10 +29,68 @@ void loop() {
   digitalWrite(11, HIGH); Serial.println("Pin 11 -> HIGH (5V)"); delay(1000); digitalWrite(11, LOW);
   digitalWrite(12, HIGH); Serial.println("Pin 12 -> HIGH (5V)"); delay(1000); digitalWrite(12, LOW);
   digitalWrite(13, HIGH); Serial.println("Pin 13 -> HIGH (5V)"); delay(1000); digitalWrite(13, LOW);
+}`,
+
+  gpioController: `// 2. Interactive Serial GPIO Controller (Pins 6 to 13)
+// Commands: "7 high", "7 low", "13 high", "13 low"
+String inputString = "";
+
+void setup() {
+  Serial.begin(9600);
+
+  // Pin 6 to 13 as OUTPUT
+  for (int pin = 6; pin <= 13; pin++) {
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, LOW);
+  }
+
+  Serial.println("GPIO Controller Ready");
+  Serial.println("Commands: 6-13 high/low");
+}
+
+void loop() {
+  if (Serial.available()) {
+    inputString = Serial.readStringUntil('\\n');
+    inputString.trim();
+
+    int spaceIndex = inputString.indexOf(' ');
+
+    if (spaceIndex > 0) {
+      String pinStr = inputString.substring(0, spaceIndex);
+      String cmd = inputString.substring(spaceIndex + 1);
+
+      pinStr.trim();
+      cmd.trim();
+      cmd.toLowerCase();
+
+      int pin = pinStr.toInt();
+
+      if (pin >= 6 && pin <= 13) {
+        if (cmd == "high") {
+          digitalWrite(pin, HIGH);
+          Serial.print("Pin ");
+          Serial.print(pin);
+          Serial.println(" -> HIGH");
+        }
+        else if (cmd == "low") {
+          digitalWrite(pin, LOW);
+          Serial.print("Pin ");
+          Serial.print(pin);
+          Serial.println(" -> LOW");
+        }
+        else {
+          Serial.println("Invalid command! Use high or low");
+        }
+      } else {
+        Serial.println("Invalid pin! Use pins 6 to 13");
+      }
+    }
+  }
 }`
 };
 
 export const ArduinoSimulator: React.FC = () => {
+  const [selectedTemplate, setSelectedTemplate] = useState<keyof typeof CODE_TEMPLATES>('chaser');
   const [code, setCode] = useState<string>(CODE_TEMPLATES.chaser);
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [serialLogs, setSerialLogs] = useState<string[]>([]);
@@ -68,6 +126,16 @@ export const ArduinoSimulator: React.FC = () => {
     };
   }, []);
 
+  const handleTemplateChange = (templateKey: keyof typeof CODE_TEMPLATES) => {
+    soundFX.playClick();
+    setSelectedTemplate(templateKey);
+    setCode(CODE_TEMPLATES[templateKey]);
+    if (isRunning) {
+      engineRef.current?.stop();
+      setIsRunning(false);
+    }
+  };
+
   const handleRunCode = () => {
     soundFX.playBeep(1200, 0.08);
     setIsRunning(true);
@@ -100,35 +168,40 @@ export const ArduinoSimulator: React.FC = () => {
     engineRef.current?.setPinInput(pin, nextState);
   };
 
-  // Serial Command Input Sender
+  // Serial Command Input Sender (Preserves exact case e.g. "7 high", "7 low")
   const handleSendSerialCommand = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!serialInput.trim()) return;
+    const rawCmd = serialInput.trim();
+    if (!rawCmd) return;
 
     soundFX.playBeep(1500, 0.04);
-    const cmd = serialInput.trim().toUpperCase();
     const time = new Date().toLocaleTimeString();
-    setSerialLogs((prev) => [`[${time}] RX > ${cmd}`, ...prev]);
+    // Display in exact user typed case without forcing uppercase!
+    setSerialLogs((prev) => [`[${time}] RX > ${rawCmd}`, ...prev]);
     setSerialInput('');
 
-    // Process commands: ALL ON, ALL OFF, PIN 8 ON, etc.
-    if (cmd === 'ALL ON' || cmd === 'ON') {
+    // Send command to C++ Engine
+    if (engineRef.current) {
+      engineRef.current.sendSerialInput(rawCmd);
+    }
+
+    // Update LED visual state directly
+    const lowerCmd = rawCmd.toLowerCase();
+    const pinMatch = lowerCmd.match(/(\d+)/);
+    if (pinMatch) {
+      const pinNum = parseInt(pinMatch[1], 10);
+      if (pinNum >= 6 && pinNum <= 13) {
+        const isLow = lowerCmd.includes('low') || lowerCmd.includes('off') || lowerCmd.includes('0');
+        setPinStates((prev) => ({ ...prev, [pinNum]: !isLow }));
+      }
+    } else if (lowerCmd === 'all on' || lowerCmd === 'on') {
       const newState: PinStateMap = {};
       for (let p = 6; p <= 13; p++) newState[p] = true;
       setPinStates((prev) => ({ ...prev, ...newState }));
-    } else if (cmd === 'ALL OFF' || cmd === 'OFF') {
+    } else if (lowerCmd === 'all off' || lowerCmd === 'off') {
       const newState: PinStateMap = {};
       for (let p = 6; p <= 13; p++) newState[p] = false;
       setPinStates((prev) => ({ ...prev, ...newState }));
-    } else {
-      const pinMatch = cmd.match(/(\d+)/);
-      if (pinMatch) {
-        const pinNum = parseInt(pinMatch[1], 10);
-        if (pinNum >= 6 && pinNum <= 13) {
-          const isOff = cmd.includes('OFF') || cmd.includes('0');
-          setPinStates((prev) => ({ ...prev, [pinNum]: !isOff }));
-        }
-      }
     }
   };
 
@@ -222,12 +295,17 @@ export const ArduinoSimulator: React.FC = () => {
 
           <div className="h-6 w-px bg-slate-800 hidden sm:block" />
 
-          {/* Active Sketch Indicator */}
+          {/* Template Selector Dropdown */}
           <div className="flex items-center gap-2 text-xs font-mono">
-            <span className="text-slate-400">SKETCH:</span>
-            <span className="bg-slate-900 border border-cyan-500/40 text-cyan-400 font-bold rounded-lg py-1.5 px-3 text-xs">
-              1. 7-LED Rainbow Wave Chaser (Pins 6-13, 1s Delay)
-            </span>
+            <span className="text-slate-400 hidden sm:inline">SKETCH:</span>
+            <select
+              value={selectedTemplate}
+              onChange={(e) => handleTemplateChange(e.target.value as keyof typeof CODE_TEMPLATES)}
+              className="bg-slate-900 border border-slate-700 text-cyan-400 font-bold rounded-lg py-1.5 px-3 text-xs focus:outline-none focus:border-cyan-400 cursor-pointer"
+            >
+              <option value="chaser">1. 7-LED Rainbow Wave Chaser (Pins 6-13, 1s Delay)</option>
+              <option value="gpioController">2. Interactive Serial GPIO Controller (Pins 6-13)</option>
+            </select>
           </div>
         </div>
 
@@ -379,7 +457,7 @@ export const ArduinoSimulator: React.FC = () => {
             {/* Log Terminal Window */}
             <div className="h-32 bg-slate-900 p-3 rounded-xl border border-slate-800 font-mono text-[11px] overflow-y-auto space-y-1">
               {serialLogs.length === 0 ? (
-                <div className="text-slate-600 italic">Serial Monitor idle. Click START SIMULATION...</div>
+                <div className="text-slate-600 italic">Serial Monitor idle. Send commands below e.g. "7 high", "7 low"...</div>
               ) : (
                 serialLogs.map((log, idx) => (
                   <div key={idx} className={log.includes('RX >') ? "text-cyan-400 font-bold" : "text-emerald-400"}>
@@ -395,7 +473,7 @@ export const ArduinoSimulator: React.FC = () => {
                 type="text"
                 value={serialInput}
                 onChange={(e) => setSerialInput(e.target.value)}
-                placeholder="Type command e.g. 'ALL ON', 'ALL OFF', 'PIN 8 ON'..."
+                placeholder="Type command e.g. '7 high', '7 low', '13 high', '13 low'..."
                 className="flex-1 bg-slate-900 border border-slate-800 text-cyan-300 px-3 py-1.5 rounded-lg text-xs font-mono focus:outline-none focus:border-cyan-500"
               />
               <button
