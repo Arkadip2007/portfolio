@@ -225,6 +225,37 @@ export class ArduinoEngine {
     const cleanStmt = stmt.trim();
     if (!cleanStmt) return;
 
+    // Handle Serial.available() loop/condition FIRST before generic if matcher
+    if (cleanStmt.includes('Serial.available()')) {
+      if (this.serialInputQueue.length > 0) {
+        const inputLine = this.serialInputQueue.shift() || '';
+        const parts = inputLine.trim().split(/\s+/);
+        if (parts.length >= 2) {
+          const pinNum = parseInt(parts[0], 10);
+          const action = parts[1].toLowerCase();
+
+          if (isNaN(pinNum) || pinNum < 6 || pinNum > 13) {
+            this.callbacks.onSerialOutput("Invalid pin! Use pins 6 to 13");
+          } else if (action === 'high' || action === 'on' || action === '1') {
+            this.pinStates[pinNum] = true;
+            this.callbacks.onPinChange(pinNum, true);
+            this.callbacks.onStateUpdate({ ...this.pinStates });
+            this.callbacks.onSerialOutput(`Pin ${pinNum} -> HIGH`);
+          } else if (action === 'low' || action === 'off' || action === '0') {
+            this.pinStates[pinNum] = false;
+            this.callbacks.onPinChange(pinNum, false);
+            this.callbacks.onStateUpdate({ ...this.pinStates });
+            this.callbacks.onSerialOutput(`Pin ${pinNum} -> LOW`);
+          } else {
+            this.callbacks.onSerialOutput("Invalid command! Use high or low");
+          }
+        } else {
+          this.callbacks.onSerialOutput("Invalid command! Format: \"<pin> high\" or \"<pin> low\"");
+        }
+      }
+      return;
+    }
+
     // Handle conditional: if (digitalRead(pin) == HIGH) { ... } else { ... }
     if (cleanStmt.startsWith('if')) {
       const firstParen = cleanStmt.indexOf('(');
@@ -265,37 +296,6 @@ export class ArduinoEngine {
         }
         return;
       }
-    }
-
-    // Handle Serial.available() loop/condition
-    if (cleanStmt.includes('Serial.available()')) {
-      if (this.serialInputQueue.length > 0) {
-        const inputLine = this.serialInputQueue.shift() || '';
-        const parts = inputLine.trim().split(/\s+/);
-        if (parts.length >= 2) {
-          const pinNum = parseInt(parts[0], 10);
-          const action = parts[1].toLowerCase();
-
-          if (pinNum >= 6 && pinNum <= 13) {
-            if (action === 'high' || action === 'on' || action === '1') {
-              this.pinStates[pinNum] = true;
-              this.callbacks.onPinChange(pinNum, true);
-              this.callbacks.onStateUpdate({ ...this.pinStates });
-              this.callbacks.onSerialOutput(`Pin ${pinNum} -> HIGH`);
-            } else if (action === 'low' || action === 'off' || action === '0') {
-              this.pinStates[pinNum] = false;
-              this.callbacks.onPinChange(pinNum, false);
-              this.callbacks.onStateUpdate({ ...this.pinStates });
-              this.callbacks.onSerialOutput(`Pin ${pinNum} -> LOW`);
-            } else {
-              this.callbacks.onSerialOutput("Invalid command! Use high or low");
-            }
-          } else {
-            this.callbacks.onSerialOutput("Invalid pin! Use pins 6 to 13");
-          }
-        }
-      }
-      return;
     }
 
     // pinMode(pin, mode)

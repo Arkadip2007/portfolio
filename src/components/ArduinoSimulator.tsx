@@ -168,7 +168,7 @@ export const ArduinoSimulator: React.FC = () => {
     engineRef.current?.setPinInput(pin, nextState);
   };
 
-  // Serial Command Input Sender (Preserves exact case e.g. "7 high", "7 low")
+  // Serial Command Input Sender (Preserves exact case e.g. "7 high", "7 low", "3 high")
   const handleSendSerialCommand = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const rawCmd = serialInput.trim();
@@ -176,33 +176,51 @@ export const ArduinoSimulator: React.FC = () => {
 
     soundFX.playBeep(1500, 0.04);
     const time = new Date().toLocaleTimeString();
-    // Display in exact user typed case without forcing uppercase!
-    setSerialLogs((prev) => [`[${time}] RX > ${rawCmd}`, ...prev]);
+    const userLog = `[${time}] RX > ${rawCmd}`;
     setSerialInput('');
 
-    // Send command to C++ Engine
-    if (engineRef.current) {
+    // Send command to C++ Engine if simulation is executing
+    if (engineRef.current && isRunning) {
+      setSerialLogs((prev) => [userLog, ...prev]);
       engineRef.current.sendSerialInput(rawCmd);
+      return;
     }
 
-    // Update LED visual state directly
+    // Interactive fallback when simulation is idle:
     const lowerCmd = rawCmd.toLowerCase();
-    const pinMatch = lowerCmd.match(/(\d+)/);
-    if (pinMatch) {
-      const pinNum = parseInt(pinMatch[1], 10);
-      if (pinNum >= 6 && pinNum <= 13) {
-        const isLow = lowerCmd.includes('low') || lowerCmd.includes('off') || lowerCmd.includes('0');
-        setPinStates((prev) => ({ ...prev, [pinNum]: !isLow }));
+    const parts = lowerCmd.split(/\s+/);
+    let systemOutput = '';
+
+    if (parts.length >= 2) {
+      const pinNum = parseInt(parts[0], 10);
+      const action = parts[1];
+
+      if (isNaN(pinNum) || pinNum < 6 || pinNum > 13) {
+        systemOutput = `[${time}] Invalid pin! Use pins 6 to 13`;
+      } else if (action === 'high' || action === 'on' || action === '1') {
+        setPinStates((prev) => ({ ...prev, [pinNum]: true }));
+        systemOutput = `[${time}] Pin ${pinNum} -> HIGH`;
+      } else if (action === 'low' || action === 'off' || action === '0') {
+        setPinStates((prev) => ({ ...prev, [pinNum]: false }));
+        systemOutput = `[${time}] Pin ${pinNum} -> LOW`;
+      } else {
+        systemOutput = `[${time}] Invalid command! Use high or low`;
       }
     } else if (lowerCmd === 'all on' || lowerCmd === 'on') {
       const newState: PinStateMap = {};
       for (let p = 6; p <= 13; p++) newState[p] = true;
       setPinStates((prev) => ({ ...prev, ...newState }));
+      systemOutput = `[${time}] All Pins (6-13) -> HIGH`;
     } else if (lowerCmd === 'all off' || lowerCmd === 'off') {
       const newState: PinStateMap = {};
       for (let p = 6; p <= 13; p++) newState[p] = false;
       setPinStates((prev) => ({ ...prev, ...newState }));
+      systemOutput = `[${time}] All Pins (6-13) -> LOW`;
+    } else {
+      systemOutput = `[${time}] Invalid command! Format: "<pin> high" or "<pin> low"`;
     }
+
+    setSerialLogs((prev) => [systemOutput, userLog, ...prev.slice(0, 48)]);
   };
 
   // Helper to replace fill color and glow style of SVG rect elements
