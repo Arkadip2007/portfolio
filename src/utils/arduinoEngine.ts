@@ -16,6 +16,8 @@ export class ArduinoEngine {
   private timerIds: number[] = [];
   private callbacks: EngineCallbacks;
 
+  private serialInputQueue: string[] = [];
+
   constructor(callbacks: EngineCallbacks) {
     this.callbacks = callbacks;
     // Default pin 13 to OUTPUT, all others 0-13 to default
@@ -23,6 +25,10 @@ export class ArduinoEngine {
       this.pinStates[p] = false;
       this.pinModes[p] = p === 13 ? 'OUTPUT' : 'INPUT';
     }
+  }
+
+  public sendSerialInput(input: string) {
+    this.serialInputQueue.push(input);
   }
 
   public setPinInput(pin: number, state: boolean) {
@@ -38,6 +44,7 @@ export class ArduinoEngine {
     this.isRunning = false;
     this.timerIds.forEach((id) => window.clearTimeout(id));
     this.timerIds = [];
+    this.serialInputQueue = [];
     // Reset output states
     for (let p = 0; p <= 13; p++) {
       this.pinStates[p] = false;
@@ -258,6 +265,37 @@ export class ArduinoEngine {
         }
         return;
       }
+    }
+
+    // Handle Serial.available() loop/condition
+    if (cleanStmt.includes('Serial.available()')) {
+      if (this.serialInputQueue.length > 0) {
+        const inputLine = this.serialInputQueue.shift() || '';
+        const parts = inputLine.trim().split(/\s+/);
+        if (parts.length >= 2) {
+          const pinNum = parseInt(parts[0], 10);
+          const action = parts[1].toLowerCase();
+
+          if (pinNum >= 6 && pinNum <= 13) {
+            if (action === 'high' || action === 'on' || action === '1') {
+              this.pinStates[pinNum] = true;
+              this.callbacks.onPinChange(pinNum, true);
+              this.callbacks.onStateUpdate({ ...this.pinStates });
+              this.callbacks.onSerialOutput(`Pin ${pinNum} -> HIGH`);
+            } else if (action === 'low' || action === 'off' || action === '0') {
+              this.pinStates[pinNum] = false;
+              this.callbacks.onPinChange(pinNum, false);
+              this.callbacks.onStateUpdate({ ...this.pinStates });
+              this.callbacks.onSerialOutput(`Pin ${pinNum} -> LOW`);
+            } else {
+              this.callbacks.onSerialOutput("Invalid command! Use high or low");
+            }
+          } else {
+            this.callbacks.onSerialOutput("Invalid pin! Use pins 6 to 13");
+          }
+        }
+      }
+      return;
     }
 
     // pinMode(pin, mode)
