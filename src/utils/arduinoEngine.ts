@@ -66,7 +66,61 @@ export class ArduinoEngine {
     const fnRegex = new RegExp(`void\\s+${fnName}\\s*\\(\\s*\\)\\s*\\{([\\s\\S]*?)\\}`, 'm');
     const match = code.match(fnRegex);
     if (!match) return [];
-    return this.splitStatements(match[1]);
+    const rawStmts = this.splitStatements(match[1]);
+    return this.expandForLoops(rawStmts);
+  }
+
+  private expandForLoops(statements: string[]): string[] {
+    const result: string[] = [];
+
+    for (const stmt of statements) {
+      const cleanStmt = stmt.trim();
+      if (cleanStmt.startsWith('for')) {
+        const firstParen = cleanStmt.indexOf('(');
+        const lastParen = cleanStmt.indexOf(')');
+        if (firstParen !== -1 && lastParen !== -1 && lastParen > firstParen) {
+          const header = cleanStmt.slice(firstParen + 1, lastParen);
+          const body = cleanStmt.slice(lastParen + 1).replace(/^\{|\}$/g, '').trim();
+
+          const parts = header.split(';');
+          if (parts.length >= 3) {
+            const initStr = parts[0];
+            const condStr = parts[1];
+            const stepStr = parts[2];
+
+            const varMatch = initStr.match(/(?:int\s+)?([a-zA-Z_]\w*)\s*=\s*(\d+)/);
+            if (varMatch) {
+              const varName = varMatch[1];
+              const startVal = parseInt(varMatch[2], 10);
+
+              const limitMatch = condStr.match(/(\d+)/);
+              const limitVal = limitMatch ? parseInt(limitMatch[1], 10) : 13;
+              const isDecrement = stepStr.includes('--') || condStr.includes('>=') || condStr.includes('>');
+
+              const bodyStmts = this.splitStatements(body);
+
+              if (isDecrement) {
+                for (let v = startVal; v >= limitVal; v--) {
+                  bodyStmts.forEach((s) => {
+                    result.push(s.replace(new RegExp(`\\b${varName}\\b`, 'g'), v.toString()));
+                  });
+                }
+              } else {
+                for (let v = startVal; v <= limitVal; v++) {
+                  bodyStmts.forEach((s) => {
+                    result.push(s.replace(new RegExp(`\\b${varName}\\b`, 'g'), v.toString()));
+                  });
+                }
+              }
+              continue;
+            }
+          }
+        }
+      }
+      result.push(stmt);
+    }
+
+    return result;
   }
 
   private splitStatements(codeBlock: string): string[] {
