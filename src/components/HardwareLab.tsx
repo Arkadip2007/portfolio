@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
-import { Cpu, Wifi, Radio, Sliders, ToggleLeft, ToggleRight, Monitor } from 'lucide-react';
+import { Cpu, Wifi, Radio, Monitor } from 'lucide-react';
 import { soundFX } from '../utils/audio';
+import { ArduinoSimulator } from './ArduinoSimulator';
 
 export const HardwareLab: React.FC = () => {
   const [activeBoard, setActiveBoard] = useState<'arduino' | 'esp32' | 'raspberry'>('arduino');
-
-  // Arduino State
-  const [arduinoLed, setArduinoLed] = useState(true);
-  const [potValue, setPotValue] = useState(512); // 0-1023 analog read
 
   // ESP32 State
   const [wifiTransmitting, setWifiTransmitting] = useState(false);
@@ -24,21 +21,12 @@ export const HardwareLab: React.FC = () => {
     23: false
   });
 
-  const toggleArduinoLed = () => {
-    soundFX.playBeep(arduinoLed ? 600 : 1200, 0.08);
-    setArduinoLed(!arduinoLed);
-  };
-
-  const handlePotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPotValue(Number(e.target.value));
-  };
-
   const triggerEspTransmit = () => {
     soundFX.playBeep(1400, 0.05);
     setWifiTransmitting(true);
     setTimeout(() => {
       setWifiTransmitting(false);
-      const newPacket = `{"topic":"iot/telemetry", "adc": ${potValue}, "ts": ${Date.now()}}`;
+      const newPacket = `{"topic":"iot/telemetry", "ts": ${Date.now()}}`;
       setMqttPackets((prev) => [newPacket, ...prev.slice(0, 3)]);
     }, 400);
   };
@@ -61,7 +49,7 @@ export const HardwareLab: React.FC = () => {
           Arduino, ESP32 & Raspberry Pi <span className="text-cyan-400 glow-cyan">Simulator</span>
         </h2>
         <p className="text-slate-300 text-sm sm:text-base">
-          Interactive microcontrollers powered by custom high-detail vector SVG schematics. Test circuits, toggle GPIO pins, simulate analog sensors, and transmit MQTT Wi-Fi telemetry packets.
+          Interactive microcontrollers powered by custom high-detail vector SVG schematics. Test circuits, write C++ sketches, toggle GPIO pins, simulate analog sensors, and transmit MQTT Wi-Fi telemetry packets.
         </p>
       </div>
 
@@ -107,88 +95,8 @@ export const HardwareLab: React.FC = () => {
       {/* Board Content Display */}
       <div className="glass-panel p-6 sm:p-8">
         
-        {/* ARDUINO UNO BOARD DISPLAY */}
-        {activeBoard === 'arduino' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            
-            {/* Left Custom SVG Vector Schematic */}
-            <div className="lg:col-span-7 flex flex-col items-center bg-slate-950/90 p-6 rounded-2xl border border-cyan-500/30 relative overflow-hidden group">
-              <span className="absolute top-3 left-4 text-xs font-mono text-cyan-400 z-10 bg-slate-900/90 px-3 py-1 rounded border border-cyan-500/30">
-                BOARD: ARDUINO UNO R3 (ATmega328P)
-              </span>
-
-              {/* Custom SVG Board Graphic */}
-              <div className="relative w-full max-w-md my-4 p-2 flex items-center justify-center">
-                <img
-                  src="/MCU/Arduino_1.svg"
-                  alt="Arduino Uno Board"
-                  className="w-full h-auto max-h-[280px] object-contain drop-shadow-[0_0_20px_rgba(0,243,255,0.25)]"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/MCU/arduino-2.svg';
-                  }}
-                />
-
-                {/* Simulated Pin 13 LED Overlay */}
-                <div className="absolute top-1/3 right-1/4 flex flex-col items-center gap-1 bg-slate-950/80 p-2 rounded-lg border border-slate-700 z-20">
-                  <div className={`w-4 h-4 rounded-full ${arduinoLed ? 'bg-emerald-400 shadow-[0_0_15px_#00ff88]' : 'bg-slate-700'}`} />
-                  <span className="text-[10px] font-mono text-slate-300">PIN 13 ({arduinoLed ? 'HIGH' : 'LOW'})</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Controls */}
-            <div className="lg:col-span-5 space-y-6">
-              
-              <div className="space-y-3">
-                <h3 className="text-xl font-bold text-white font-heading">Arduino Pin 13 & Potentiometer</h3>
-                <p className="text-xs text-slate-300">
-                  Toggle digital GPIO Pin 13 output or slide the potentiometer knob to adjust Analog Read (A0).
-                </p>
-              </div>
-
-              {/* Pin 13 LED Toggle */}
-              <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-4 h-4 rounded-full ${arduinoLed ? 'bg-emerald-400 shadow-[0_0_12px_#00ff88]' : 'bg-slate-700'}`} />
-                  <span className="text-sm font-mono text-slate-200">Digital Pin 13 State</span>
-                </div>
-                <button
-                  onClick={toggleArduinoLed}
-                  className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5"
-                >
-                  {arduinoLed ? <ToggleRight className="w-5 h-5 text-emerald-400" /> : <ToggleLeft className="w-5 h-5 text-slate-400" />}
-                  {arduinoLed ? 'LED ON' : 'LED OFF'}
-                </button>
-              </div>
-
-              {/* Analog Potentiometer Slider */}
-              <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800 space-y-3">
-                <div className="flex justify-between items-center text-xs font-mono">
-                  <span className="text-slate-300 flex items-center gap-1.5">
-                    <Sliders className="w-4 h-4 text-cyan-400" />
-                    Analog Pin A0 Potentiometer
-                  </span>
-                  <span className="text-cyan-400 font-bold">{potValue} / 1023 ({(potValue * 5 / 1023).toFixed(2)}V)</span>
-                </div>
-
-                <input
-                  type="range"
-                  min="0"
-                  max="1023"
-                  value={potValue}
-                  onChange={handlePotChange}
-                  className="w-full accent-cyan-400 cursor-pointer"
-                />
-
-                <div className="bg-slate-950 p-2.5 rounded font-mono text-xs text-cyan-300">
-                  Serial.println(analogRead(A0)); // Out: {potValue}
-                </div>
-              </div>
-
-            </div>
-
-          </div>
-        )}
+        {/* ARDUINO UNO BOARD INTERACTIVE ONLINE SIMULATOR */}
+        {activeBoard === 'arduino' && <ArduinoSimulator />}
 
         {/* ESP32 BOARD DISPLAY */}
         {activeBoard === 'esp32' && (
