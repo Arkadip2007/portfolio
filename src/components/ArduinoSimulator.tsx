@@ -6,74 +6,33 @@ import type { PinStateMap } from '../utils/arduinoEngine';
 import arduinoSvgRaw from '../../public/MCU/arduino-2.svg?raw';
 
 const CODE_TEMPLATES = {
-  chaser: `// 1. Rainbow Wave LED Chaser (Pins 6, 7, 8, 9, 10, 11, 12, 13)
+  chaser: `// 1. Rainbow Wave LED Chaser (Pins 6 to 13 - 1 Second Delay)
 void setup() {
-  for (int p = 6; p <= 13; p++) {
-    pinMode(p, OUTPUT);
-  }
+  pinMode(6, OUTPUT);
+  pinMode(7, OUTPUT);
+  pinMode(8, OUTPUT);
+  pinMode(9, OUTPUT);
+  pinMode(10, OUTPUT);
+  pinMode(11, OUTPUT);
+  pinMode(12, OUTPUT);
+  pinMode(13, OUTPUT);
   Serial.begin(9600);
-  Serial.println("7-LED Rainbow Chaser Booted!");
+  Serial.println("Rainbow LED Chaser Booted!");
 }
 
 void loop() {
-  for (int p = 6; p <= 13; p++) {
-    digitalWrite(p, HIGH);
-    Serial.println("Pin " + String(p) + " -> HIGH (5V)");
-    delay(150);
-    digitalWrite(p, LOW);
-  }
-}`,
-
-  serialControl: `// 2. Serial Telemetry & Strobe Alternator (Pins 6 to 13)
-void setup() {
-  for (int p = 6; p <= 13; p++) {
-    pinMode(p, OUTPUT);
-  }
-  Serial.begin(9600);
-  Serial.println("Serial Control System Ready!");
-}
-
-void loop() {
-  // Turn ON Odd Pins
-  digitalWrite(6, HIGH); digitalWrite(8, HIGH); digitalWrite(10, HIGH); digitalWrite(12, HIGH);
-  digitalWrite(7, LOW);  digitalWrite(9, LOW);  digitalWrite(11, LOW);  digitalWrite(13, LOW);
-  Serial.println("Serial Executed: Odd Pins -> HIGH (5V)");
-  delay(400);
-
-  // Turn ON Even Pins
-  digitalWrite(6, LOW);  digitalWrite(8, LOW);  digitalWrite(10, LOW);  digitalWrite(12, LOW);
-  digitalWrite(7, HIGH); digitalWrite(9, HIGH); digitalWrite(11, HIGH); digitalWrite(13, HIGH);
-  Serial.println("Serial Executed: Even Pins -> HIGH (5V)");
-  delay(400);
-}`,
-
-  pingPong: `// 3. Ping-Pong Bouncing LED Effect (Pins 6 to 13)
-void setup() {
-  for (int p = 6; p <= 13; p++) {
-    pinMode(p, OUTPUT);
-  }
-  Serial.begin(9600);
-  Serial.println("Ping-Pong Bounce Initialized!");
-}
-
-void loop() {
-  // Forward Sweep
-  for (int p = 6; p <= 13; p++) {
-    digitalWrite(p, HIGH);
-    delay(100);
-    digitalWrite(p, LOW);
-  }
-  // Reverse Sweep
-  for (int p = 12; p >= 7; p--) {
-    digitalWrite(p, HIGH);
-    delay(100);
-    digitalWrite(p, LOW);
-  }
+  digitalWrite(6, HIGH); Serial.println("Pin 6 -> HIGH (5V)"); delay(1000); digitalWrite(6, LOW);
+  digitalWrite(7, HIGH); Serial.println("Pin 7 -> HIGH (5V)"); delay(1000); digitalWrite(7, LOW);
+  digitalWrite(8, HIGH); Serial.println("Pin 8 -> HIGH (5V)"); delay(1000); digitalWrite(8, LOW);
+  digitalWrite(9, HIGH); Serial.println("Pin 9 -> HIGH (5V)"); delay(1000); digitalWrite(9, LOW);
+  digitalWrite(10, HIGH); Serial.println("Pin 10 -> HIGH (5V)"); delay(1000); digitalWrite(10, LOW);
+  digitalWrite(11, HIGH); Serial.println("Pin 11 -> HIGH (5V)"); delay(1000); digitalWrite(11, LOW);
+  digitalWrite(12, HIGH); Serial.println("Pin 12 -> HIGH (5V)"); delay(1000); digitalWrite(12, LOW);
+  digitalWrite(13, HIGH); Serial.println("Pin 13 -> HIGH (5V)"); delay(1000); digitalWrite(13, LOW);
 }`
 };
 
 export const ArduinoSimulator: React.FC = () => {
-  const [selectedTemplate, setSelectedTemplate] = useState<keyof typeof CODE_TEMPLATES>('chaser');
   const [code, setCode] = useState<string>(CODE_TEMPLATES.chaser);
   const [isRunning, setIsRunning] = useState<boolean>(false);
   const [serialLogs, setSerialLogs] = useState<string[]>([]);
@@ -108,16 +67,6 @@ export const ArduinoSimulator: React.FC = () => {
       engineRef.current?.stop();
     };
   }, []);
-
-  const handleTemplateChange = (templateKey: keyof typeof CODE_TEMPLATES) => {
-    soundFX.playClick();
-    setSelectedTemplate(templateKey);
-    setCode(CODE_TEMPLATES[templateKey]);
-    if (isRunning) {
-      engineRef.current?.stop();
-      setIsRunning(false);
-    }
-  };
 
   const handleRunCode = () => {
     soundFX.playBeep(1200, 0.08);
@@ -162,7 +111,7 @@ export const ArduinoSimulator: React.FC = () => {
     setSerialLogs((prev) => [`[${time}] RX > ${cmd}`, ...prev]);
     setSerialInput('');
 
-    // Process commands: ALL ON, ALL OFF, PIN6 ON, etc.
+    // Process commands: ALL ON, ALL OFF, PIN 8 ON, etc.
     if (cmd === 'ALL ON' || cmd === 'ON') {
       const newState: PinStateMap = {};
       for (let p = 6; p <= 13; p++) newState[p] = true;
@@ -273,18 +222,12 @@ export const ArduinoSimulator: React.FC = () => {
 
           <div className="h-6 w-px bg-slate-800 hidden sm:block" />
 
-          {/* Template Selector Dropdown */}
+          {/* Active Sketch Indicator */}
           <div className="flex items-center gap-2 text-xs font-mono">
-            <span className="text-slate-400 hidden sm:inline">SKETCH:</span>
-            <select
-              value={selectedTemplate}
-              onChange={(e) => handleTemplateChange(e.target.value as keyof typeof CODE_TEMPLATES)}
-              className="bg-slate-900 border border-slate-700 text-cyan-400 font-bold rounded-lg py-1.5 px-3 text-xs focus:outline-none focus:border-cyan-400 cursor-pointer"
-            >
-              <option value="chaser">1. 7-LED Rainbow Wave Chaser (Pins 6-13)</option>
-              <option value="serialControl">2. Serial Telemetry Strobe (Pins 6-13)</option>
-              <option value="pingPong">3. Ping-Pong Bouncing LED Effect</option>
-            </select>
+            <span className="text-slate-400">SKETCH:</span>
+            <span className="bg-slate-900 border border-cyan-500/40 text-cyan-400 font-bold rounded-lg py-1.5 px-3 text-xs">
+              1. 7-LED Rainbow Wave Chaser (Pins 6-13, 1s Delay)
+            </span>
           </div>
         </div>
 
@@ -436,7 +379,7 @@ export const ArduinoSimulator: React.FC = () => {
             {/* Log Terminal Window */}
             <div className="h-32 bg-slate-900 p-3 rounded-xl border border-slate-800 font-mono text-[11px] overflow-y-auto space-y-1">
               {serialLogs.length === 0 ? (
-                <div className="text-slate-600 italic">Serial Monitor idle. Type commands below or click START SIMULATION...</div>
+                <div className="text-slate-600 italic">Serial Monitor idle. Click START SIMULATION...</div>
               ) : (
                 serialLogs.map((log, idx) => (
                   <div key={idx} className={log.includes('RX >') ? "text-cyan-400 font-bold" : "text-emerald-400"}>
